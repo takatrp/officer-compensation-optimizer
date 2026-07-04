@@ -566,6 +566,7 @@ canvas{
 
 .legend-dot.metric{background:var(--blue)}
 .legend-dot.cash{background:var(--green)}
+.legend-dot.retained{background:var(--violet)}
 
 .table-wrap{
   overflow:auto;

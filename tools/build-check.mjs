@@ -14,10 +14,11 @@ for (const localAsset of ["styles.css", "app.js"]) {
 }
 
 assert.ok(html.includes("役員報酬 最適化シミュレーター"));
-assert.ok(html.includes("v1.3"));
+assert.ok(html.includes("v1.4"));
 assert.ok(html.includes("strategyPreset"));
 assert.ok(html.includes("バランス型"));
 assert.ok(html.includes("法人資金温存"));
+assert.ok(html.includes("法人留保"));
 assert.ok(html.includes("data-for=\"preProfit\""));
 assert.ok(html.includes("data-for=\"currentMonthly\""));
 assert.ok(html.includes("令和8・9年分"));
@@ -26,6 +27,8 @@ assert.ok(html.includes("国民健康保険料・国民年金保険料"));
 assert.ok(html.includes("CPI連動見直し"));
 assert.ok(html.includes("令和8年度料率"));
 assert.ok(js.includes("renderBalance"));
+assert.ok(js.includes("row.retained"));
+assert.ok(js.includes("measureText"));
 assert.ok(js.includes("renderRecommendationReason"));
 assert.ok(js.includes("strategyPresets"));
 assert.ok(js.includes("applyStrategyPreset"));
@@ -35,6 +38,7 @@ assert.ok(js.includes("createCalculator"));
 assert.ok(js.includes("1040000"));
 assert.ok(js.includes("990000"));
 assert.ok(css.includes(".balance-track"));
+assert.ok(css.includes(".legend-dot.retained"));
 assert.ok(css.includes(".recommendation-reason"));
 assert.ok(css.includes(".reason-list"));
 assert.doesNotMatch(html, /<script[^>]+src=["']https?:/i);

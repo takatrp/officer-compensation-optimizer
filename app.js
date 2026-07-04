@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.3";
+  const VERSION = "1.4";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -795,11 +795,11 @@
       return;
     }
 
-    const pad = {l:74, r:28, t:30, b:54};
+    const pad = {l:74, r:54, t:30, b:54};
     const w = canvas.width - pad.l - pad.r;
     const h = canvas.height - pad.t - pad.b;
     const xs = series.map((row) => row.monthly);
-    const values = series.flatMap((row) => [row.metric, row.personalTakeHome]);
+    const values = series.flatMap((row) => [row.metric, row.personalTakeHome, row.retained]);
     const xmin = Math.min(...xs);
     const xmax = Math.max(...xs);
     const ymin = Math.min(...values);
@@ -834,6 +834,7 @@
     function drawLine(getValue, color, width){
       ctx.strokeStyle = color;
       ctx.lineWidth = width;
+      ctx.setLineDash([]);
       ctx.beginPath();
       series.forEach((row, index) => {
         const x = xScale(row.monthly);
@@ -845,16 +846,24 @@
     }
 
     drawLine((row) => row.personalTakeHome, "#047857", 2);
+    drawLine((row) => row.retained, "#6d4aff", 2);
     drawLine((row) => row.metric, "#2458d3", 3);
 
     const best = rows[0];
+    const bestX = xScale(best.monthly);
+    const bestY = yScale(best.metric);
     ctx.fillStyle = "#2458d3";
     ctx.beginPath();
-    ctx.arc(xScale(best.monthly), yScale(best.metric), 5, 0, Math.PI * 2);
+    ctx.arc(bestX, bestY, 5, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "#172033";
     ctx.font = "13px sans-serif";
-    ctx.fillText("おすすめ", xScale(best.monthly) + 8, yScale(best.metric) - 8);
+    const bestLabel = "おすすめ";
+    const bestLabelWidth = ctx.measureText(bestLabel).width;
+    const labelRightX = bestX + 8;
+    const labelLeftX = bestX - bestLabelWidth - 8;
+    const bestLabelX = labelRightX + bestLabelWidth <= pad.l + w ? labelRightX : Math.max(pad.l + 4, labelLeftX);
+    ctx.fillText(bestLabel, bestLabelX, Math.max(pad.t + 13, bestY - 8));
 
     if(current){
       const x = xScale(current.monthly);
