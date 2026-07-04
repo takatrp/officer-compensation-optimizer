@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.0";
+  const VERSION = "1.1";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -189,19 +189,26 @@
     return bands[bands.length - 1][2];
   }
 
-  function salaryDeduction(salary){
+  function salaryDeduction(salary, year){
     if(salary <= 0) return 0;
     let deduction;
-    if(salary <= 1900000) deduction = 650000;
+
+    if(year === "r8r9" && salary <= 2200000){
+      deduction = 740000;
+    }else if(salary <= 1900000){
+      deduction = year === "r10" ? Math.max(salary * 0.3 + 80000, 690000) : 650000;
+    }
     else if(salary <= 3600000) deduction = salary * 0.3 + 80000;
     else if(salary <= 6600000) deduction = salary * 0.2 + 440000;
     else if(salary <= 8500000) deduction = salary * 0.1 + 1100000;
     else deduction = 1950000;
+
+    if(year === "r10") deduction = Math.max(deduction, 690000);
     return Math.min(salary, deduction);
   }
 
-  function salaryIncome(salary){
-    return Math.max(0, salary - salaryDeduction(salary));
+  function salaryIncome(salary, year){
+    return Math.max(0, salary - salaryDeduction(salary, year));
   }
 
   function basicNational(totalIncome, year){
@@ -217,8 +224,18 @@
       return 0;
     }
 
-    if(totalIncome <= 1320000) return 950000;
-    if(totalIncome <= 23500000) return 580000;
+    if(year === "r8r9"){
+      if(totalIncome <= 4890000) return 1040000;
+      if(totalIncome <= 6550000) return 670000;
+      if(totalIncome <= 23500000) return 620000;
+      if(totalIncome <= 24000000) return 480000;
+      if(totalIncome <= 24500000) return 320000;
+      if(totalIncome <= 25000000) return 160000;
+      return 0;
+    }
+
+    if(totalIncome <= 1320000) return 990000;
+    if(totalIncome <= 23500000) return 620000;
     if(totalIncome <= 24000000) return 480000;
     if(totalIncome <= 24500000) return 320000;
     if(totalIncome <= 25000000) return 160000;
@@ -364,7 +381,7 @@
       const retained = companyAfterTax - totalDividend;
       const ownerDividend = totalDividend * p.share;
 
-      const salIncome = salaryIncome(annualSalary);
+      const salIncome = salaryIncome(annualSalary, p.taxYear);
       const totalIncome = salIncome + ownerDividend + p.otherIncome;
 
       const basicN = basicNational(totalIncome, p.taxYear);

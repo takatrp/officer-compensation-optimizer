@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>役員報酬 最適化シミュレーター</title>
-    <link rel="stylesheet" href="styles.css?v=1.0">
-    <script src="app.js?v=1.0" defer></script>
+    <link rel="stylesheet" href="styles.css?v=1.1">
+    <script src="app.js?v=1.1" defer></script>
   </head>
   <body>
     <main class="page-shell">
@@ -15,7 +15,7 @@
           <h1>役員報酬 最適化シミュレーター</h1>
           <p class="lead">役員報酬、配当、法人留保、税金、社会保険のバランスを一画面で確認します。</p>
         </div>
-        <p class="revision">v1.0</p>
+        <p class="revision">v1.1</p>
       </header>
 
       <section class="work-grid" aria-label="役員報酬の試算">
@@ -124,7 +124,8 @@
                 <label class="field" for="taxYear">
                   <span class="field-label">所得税の年分</span>
                   <select id="taxYear">
-                    <option value="r8r9">令和8年分以後</option>
+                    <option value="r8r9">令和8・9年分</option>
+                    <option value="r10">令和10年分以後</option>
                     <option value="r7">令和7年分</option>
                   </select>
                 </label>
@@ -315,6 +316,9 @@
           <li>法人税等は概算の実効税率で置いています。顧問先ごとの資本金、所在地、所得区分、欠損金、事業税の損金算入などは反映していません。</li>
           <li>配当は非上場会社オーナーの総合課税を主に想定しています。上場株式等の申告不要・申告分離課税比較ではありません。</li>
           <li>社会保険料率は協会けんぽ兵庫支部の令和8年度料率を初期値にしています。健康保険・介護保険は令和8年3月分以後、子ども・子育て支援金は令和8年4月分以後の料率を通年試算用に置いています。</li>
+          <li>月額0円から低額の役員報酬案では、社会保険に加入しない場合の国民健康保険料・国民年金保険料を反映していません。実務では報酬下限の設定や別途試算で補正してください。</li>
+          <li>令和10年分以後の基礎控除・給与所得控除の最低保障額は、今後のCPI連動見直し予定があるため、実際の適用時には最新法令を確認してください。</li>
+          <li>住民税の調整控除、均等割の非課税限度額、防衛特別法人税などは簡略化しています。法人税等の実効税率欄で顧問先ごとに調整してください。</li>
         </ul>
       </section>
     </main>
