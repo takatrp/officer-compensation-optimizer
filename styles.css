@@ -276,14 +276,20 @@ select{
 
 .hero-result{
   display:grid;
-  grid-template-columns:1fr auto;
-  gap:14px;
-  align-items:end;
-  padding:14px;
+  grid-template-columns:minmax(180px,.7fr) minmax(300px,1.3fr);
+  gap:12px;
+  align-items:stretch;
+  padding:12px;
   border:1px solid #b7d8de;
   border-left:5px solid var(--brand);
   border-radius:8px;
   background:#f1fafb;
+}
+
+.recommendation-main{
+  display:grid;
+  align-content:start;
+  min-width:0;
 }
 
 .hero-result .label{
@@ -295,7 +301,7 @@ select{
 
 .hero-result .amount{
   margin:0;
-  font-size:clamp(30px,4vw,44px);
+  font-size:clamp(24px,2.6vw,34px);
   font-weight:950;
   line-height:1.05;
 }
@@ -303,8 +309,60 @@ select{
 .hero-result .sub{
   margin:8px 0 0;
   color:var(--muted);
-  font-size:13px;
+  font-size:12px;
   font-weight:700;
+}
+
+.recommendation-reason{
+  min-width:0;
+  padding:12px;
+  border:1px solid #d8e7ea;
+  border-radius:8px;
+  background:#fff;
+}
+
+.reason-title{
+  margin:0;
+  color:var(--brand-dark);
+  font-size:13px;
+  font-weight:950;
+}
+
+.reason-lead{
+  margin:3px 0 0;
+  color:#344054;
+  font-size:12px;
+  font-weight:800;
+}
+
+.reason-list{
+  display:grid;
+  gap:7px;
+  margin:10px 0 0;
+}
+
+.reason-list div{
+  display:grid;
+  grid-template-columns:86px minmax(0,1fr);
+  gap:8px;
+  min-width:0;
+}
+
+.reason-list dt,
+.reason-list dd{
+  margin:0;
+  font-size:12px;
+  line-height:1.45;
+}
+
+.reason-list dt{
+  color:var(--muted);
+  font-weight:900;
+}
+
+.reason-list dd{
+  color:#172033;
+  font-weight:750;
 }
 
 .score-card{
@@ -599,6 +657,11 @@ tr:last-child td{
   .delta-grid,
   .balance-legend{
     grid-template-columns:1fr;
+  }
+
+  .reason-list div{
+    grid-template-columns:1fr;
+    gap:2px;
   }
 
   .score-card{

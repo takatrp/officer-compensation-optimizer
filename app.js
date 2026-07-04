@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.2";
+  const VERSION = "1.3";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -584,6 +584,45 @@
     return "";
   }
 
+  function signedMan(n){
+    if(!Number.isFinite(n)) return "-";
+    return `${n >= 0 ? "+" : ""}${man(n)}`;
+  }
+
+  function renderRecommendationReason(best, current, p){
+    const metricLine = p.objective === "ownerTotal"
+      ? `個人手取り ${man(best.personalTakeHome)} ＋ 持分相当の法人留保 ${man(best.ownerRetainedValue)} ＝ ${man(best.metric)}`
+      : `個人手取り ${man(best.personalTakeHome)} ＝ ${man(best.metric)}`;
+    const comparisonLine = current
+      ? `比較月額比：評価指標 ${signedMan(best.metric - current.metric)}、個人手取り ${signedMan(best.personalTakeHome - current.personalTakeHome)}、法人留保 ${signedMan(best.retained - current.retained)}`
+      : "比較月額は現在の条件では候補外です。";
+
+    return `
+      <div class="recommendation-reason">
+        <p class="reason-title">なぜこの金額か</p>
+        <p class="reason-lead">探索条件を満たす候補のうち、評価指標が最も高い月額です。</p>
+        <dl class="reason-list">
+          <div>
+            <dt>評価指標</dt>
+            <dd>${metricLine}</dd>
+          </div>
+          <div>
+            <dt>個人手取り</dt>
+            <dd>給与 ${man(best.annualSalary)} ＋ 本人配当 ${man(best.ownerDividend)} − 個人税 ${man(best.personalTax)} − 本人社保 ${man(best.employeeSI)} ＝ ${man(best.personalTakeHome)}</dd>
+          </div>
+          <div>
+            <dt>法人側</dt>
+            <dd>税引後利益 ${man(best.companyAfterTax)} − 配当総額 ${man(best.totalDividend)} ＝ 法人留保 ${man(best.retained)}</dd>
+          </div>
+          <div>
+            <dt>比較</dt>
+            <dd>${comparisonLine}</dd>
+          </div>
+        </dl>
+      </div>
+    `;
+  }
+
   function renderResult(best, current, noDivBest, allDivBest, p){
     const box = document.getElementById("resultBox");
     const status = document.getElementById("calcStatus");
@@ -611,15 +650,12 @@
 
     box.innerHTML = `
       <div class="hero-result">
-        <div>
+        <div class="recommendation-main">
           <p class="label">おすすめ月額役員報酬</p>
           <p class="amount">${yen(best.monthly)}</p>
           <p class="sub">年間 ${yen(best.annualSalary)} ／ 配当率 ${pct(best.payoutRate)} ／ 評価基準 ${objectiveText}</p>
         </div>
-        <div class="score-card">
-          <p class="k">評価指標</p>
-          <p class="v">${man(best.metric)}</p>
-        </div>
+        ${renderRecommendationReason(best, current, p)}
       </div>
 
       <div class="metric-grid">
