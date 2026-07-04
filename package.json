@@ -1,0 +1,9 @@
+{
+  "name": "officer-compensation-optimizer",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node tools/test.mjs",
+    "build": "node --check app.js && node tools/build-check.mjs"
+  }
+}

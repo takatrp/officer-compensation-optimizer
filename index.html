@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>役員報酬 最適化シミュレーター</title>
+    <link rel="stylesheet" href="styles.css?v=1.0">
+    <script src="app.js?v=1.0" defer></script>
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">松本会計 実務補助ツール</p>
+          <h1>役員報酬 最適化シミュレーター</h1>
+          <p class="lead">役員報酬、配当、法人留保、税金、社会保険のバランスを一画面で確認します。</p>
+        </div>
+        <p class="revision">v1.0</p>
+      </header>
+
+      <section class="work-grid" aria-label="役員報酬の試算">
+        <form class="panel controls-panel" id="controls" autocomplete="off">
+          <div class="panel-head">
+            <div>
+              <p class="section-kicker">入力</p>
+              <h2>試算条件</h2>
+            </div>
+            <button class="ghost-button" type="button" id="resetDefaults">初期値に戻す</button>
+          </div>
+
+          <div class="control-section">
+            <h3>基本条件</h3>
+            <div class="field-grid">
+              <label class="field" for="preProfit">
+                <span class="field-label">役員報酬・会社負担社保控除前利益</span>
+                <input id="preProfit" type="text" inputmode="numeric" value="20,000,000">
+                <input class="range" type="range" min="0" max="50000000" step="100000" data-for="preProfit">
+              </label>
+
+              <label class="field" for="currentMonthly">
+                <span class="field-label">比較する月額役員報酬</span>
+                <input id="currentMonthly" type="text" inputmode="numeric" value="800,000">
+                <input class="range" type="range" min="0" max="5000000" step="10000" data-for="currentMonthly">
+              </label>
+
+              <label class="field" for="maxMonthly">
+                <span class="field-label">探索する月額上限</span>
+                <input id="maxMonthly" type="text" inputmode="numeric" value="2,000,000">
+                <input class="range" type="range" min="100000" max="5000000" step="10000" data-for="maxMonthly">
+              </label>
+
+              <label class="field" for="step">
+                <span class="field-label">探索刻み</span>
+                <input id="step" type="text" inputmode="numeric" value="10,000">
+                <input class="range" type="range" min="1000" max="100000" step="1000" data-for="step">
+              </label>
+
+              <label class="field" for="shareRate">
+                <span class="field-label">持株割合</span>
+                <input id="shareRate" type="text" inputmode="decimal" value="100">
+                <input class="range" type="range" min="0" max="100" step="1" data-for="shareRate">
+              </label>
+
+              <label class="field" for="otherIncome">
+                <span class="field-label">他の所得金額</span>
+                <input id="otherIncome" type="text" inputmode="numeric" value="0">
+                <input class="range" type="range" min="0" max="30000000" step="100000" data-for="otherIncome">
+              </label>
+            </div>
+          </div>
+
+          <div class="control-section">
+            <h3>評価と配当</h3>
+            <div class="field-grid">
+              <label class="field" for="objective">
+                <span class="field-label">評価基準</span>
+                <select id="objective">
+                  <option value="ownerTotal">オーナー総手残り最大</option>
+                  <option value="personalCash">個人キャッシュ最大</option>
+                </select>
+              </label>
+
+              <label class="field" for="divPolicy">
+                <span class="field-label">配当方針</span>
+                <select id="divPolicy">
+                  <option value="optimize">配当率も探索する</option>
+                  <option value="none">配当なし</option>
+                  <option value="all">税後利益を全額配当</option>
+                  <option value="fixed">指定配当率</option>
+                </select>
+              </label>
+
+              <label class="field" for="fixedPayout">
+                <span class="field-label">指定配当率</span>
+                <input id="fixedPayout" type="text" inputmode="decimal" value="50">
+                <input class="range" type="range" min="0" max="100" step="1" data-for="fixedPayout">
+              </label>
+
+              <label class="field" for="minRetained">
+                <span class="field-label">税後法人留保の下限</span>
+                <input id="minRetained" type="text" inputmode="numeric" value="0">
+                <input class="range" type="range" min="0" max="30000000" step="100000" data-for="minRetained">
+              </label>
+            </div>
+
+            <div class="toggle-grid">
+              <label class="toggle-line">
+                <input type="checkbox" id="noLoss" checked>
+                <span>法人の税後利益がマイナスになる案を除外</span>
+              </label>
+              <label class="toggle-line">
+                <input type="checkbox" id="applyDividendCredit" checked>
+                <span>配当控除を適用する</span>
+              </label>
+            </div>
+          </div>
+
+          <details class="advanced">
+            <summary>税率・社会保険料率を調整</summary>
+
+            <div class="control-section compact">
+              <h3>個人税</h3>
+              <div class="field-grid">
+                <label class="field" for="taxYear">
+                  <span class="field-label">所得税の年分</span>
+                  <select id="taxYear">
+                    <option value="r8r9">令和8年分以後</option>
+                    <option value="r7">令和7年分</option>
+                  </select>
+                </label>
+
+                <label class="field" for="surtaxRate">
+                  <span class="field-label">復興特別所得税率</span>
+                  <input id="surtaxRate" type="text" inputmode="decimal" value="2.1">
+                  <input class="range" type="range" min="0" max="5" step="0.1" data-for="surtaxRate">
+                </label>
+
+                <label class="field" for="residentRate">
+                  <span class="field-label">住民税所得割率</span>
+                  <input id="residentRate" type="text" inputmode="decimal" value="10.0">
+                  <input class="range" type="range" min="0" max="20" step="0.1" data-for="residentRate">
+                </label>
+
+                <label class="field" for="residentPerCapita">
+                  <span class="field-label">住民税均等割等</span>
+                  <input id="residentPerCapita" type="text" inputmode="numeric" value="5,000">
+                  <input class="range" type="range" min="0" max="20000" step="500" data-for="residentPerCapita">
+                </label>
+
+                <label class="field" for="otherDedN">
+                  <span class="field-label">その他所得控除 所得税</span>
+                  <input id="otherDedN" type="text" inputmode="numeric" value="0">
+                  <input class="range" type="range" min="0" max="10000000" step="100000" data-for="otherDedN">
+                </label>
+
+                <label class="field" for="otherDedR">
+                  <span class="field-label">その他所得控除 住民税</span>
+                  <input id="otherDedR" type="text" inputmode="numeric" value="0">
+                  <input class="range" type="range" min="0" max="10000000" step="100000" data-for="otherDedR">
+                </label>
+              </div>
+            </div>
+
+            <div class="control-section compact">
+              <h3>社会保険</h3>
+              <div class="field-grid">
+                <label class="field" for="healthRate">
+                  <span class="field-label">健康保険料率</span>
+                  <input id="healthRate" type="text" inputmode="decimal" value="10.12">
+                  <input class="range" type="range" min="0" max="15" step="0.01" data-for="healthRate">
+                </label>
+
+                <label class="field" for="careRate">
+                  <span class="field-label">介護保険料率</span>
+                  <input id="careRate" type="text" inputmode="decimal" value="1.62">
+                  <input class="range" type="range" min="0" max="4" step="0.01" data-for="careRate">
+                </label>
+
+                <label class="field" for="supportRate">
+                  <span class="field-label">子ども・子育て支援金率</span>
+                  <input id="supportRate" type="text" inputmode="decimal" value="0.23">
+                  <input class="range" type="range" min="0" max="2" step="0.01" data-for="supportRate">
+                </label>
+
+                <label class="field" for="pensionRate">
+                  <span class="field-label">厚生年金保険料率</span>
+                  <input id="pensionRate" type="text" inputmode="decimal" value="18.30">
+                  <input class="range" type="range" min="0" max="25" step="0.01" data-for="pensionRate">
+                </label>
+
+                <label class="field" for="childContributionRate">
+                  <span class="field-label">子ども・子育て拠出金率</span>
+                  <input id="childContributionRate" type="text" inputmode="decimal" value="0.36">
+                  <input class="range" type="range" min="0" max="2" step="0.01" data-for="childContributionRate">
+                </label>
+              </div>
+
+              <div class="toggle-grid">
+                <label class="toggle-line">
+                  <input type="checkbox" id="careApplicable" checked>
+                  <span>40から64歳として介護保険を含める</span>
+                </label>
+                <label class="toggle-line">
+                  <input type="checkbox" id="socialApplicable" checked>
+                  <span>役員報酬に社会保険をかける</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="control-section compact">
+              <h3>法人税等</h3>
+              <div class="field-grid">
+                <label class="field" for="corpLowRate">
+                  <span class="field-label">年800万円以下部分の実効税率</span>
+                  <input id="corpLowRate" type="text" inputmode="decimal" value="25.0">
+                  <input class="range" type="range" min="0" max="50" step="0.1" data-for="corpLowRate">
+                </label>
+
+                <label class="field" for="corpHighRate">
+                  <span class="field-label">年800万円超部分の実効税率</span>
+                  <input id="corpHighRate" type="text" inputmode="decimal" value="34.0">
+                  <input class="range" type="range" min="0" max="60" step="0.1" data-for="corpHighRate">
+                </label>
+
+                <label class="field" for="corpThreshold">
+                  <span class="field-label">軽減税率の区分額</span>
+                  <input id="corpThreshold" type="text" inputmode="numeric" value="8,000,000">
+                  <input class="range" type="range" min="0" max="20000000" step="100000" data-for="corpThreshold">
+                </label>
+
+                <label class="field" for="corpFixedTax">
+                  <span class="field-label">均等割等の固定税額</span>
+                  <input id="corpFixedTax" type="text" inputmode="numeric" value="70,000">
+                  <input class="range" type="range" min="0" max="300000" step="10000" data-for="corpFixedTax">
+                </label>
+
+                <label class="field" for="divCreditNLow">
+                  <span class="field-label">配当控除 所得税 低率側</span>
+                  <input id="divCreditNLow" type="text" inputmode="decimal" value="10.0">
+                  <input class="range" type="range" min="0" max="15" step="0.1" data-for="divCreditNLow">
+                </label>
+
+                <label class="field" for="divCreditNHigh">
+                  <span class="field-label">配当控除 所得税 高率側</span>
+                  <input id="divCreditNHigh" type="text" inputmode="decimal" value="5.0">
+                  <input class="range" type="range" min="0" max="10" step="0.1" data-for="divCreditNHigh">
+                </label>
+
+                <label class="field" for="divCreditRLow">
+                  <span class="field-label">配当控除 住民税 低率側</span>
+                  <input id="divCreditRLow" type="text" inputmode="decimal" value="2.8">
+                  <input class="range" type="range" min="0" max="8" step="0.1" data-for="divCreditRLow">
+                </label>
+
+                <label class="field" for="divCreditRHigh">
+                  <span class="field-label">配当控除 住民税 高率側</span>
+                  <input id="divCreditRHigh" type="text" inputmode="decimal" value="1.4">
+                  <input class="range" type="range" min="0" max="5" step="0.1" data-for="divCreditRHigh">
+                </label>
+              </div>
+            </div>
+          </details>
+        </form>
+
+        <section class="panel result-panel" aria-live="polite">
+          <div class="panel-head">
+            <div>
+              <p class="section-kicker">結果</p>
+              <h2>おすすめ案</h2>
+            </div>
+            <span id="calcStatus" class="status-pill">計算中</span>
+          </div>
+
+          <div id="resultBox"></div>
+          <div id="balanceBox" class="balance-box"></div>
+          <div id="deltaBox" class="delta-grid"></div>
+        </section>
+      </section>
+
+      <section class="visual-grid">
+        <section class="panel chart-panel">
+          <div class="panel-head">
+            <div>
+              <p class="section-kicker">推移</p>
+              <h2>月額別の手残り曲線</h2>
+            </div>
+            <div class="legend-row" aria-hidden="true">
+              <span><i class="legend-dot metric"></i>評価指標</span>
+              <span><i class="legend-dot cash"></i>個人手取り</span>
+            </div>
+          </div>
+          <canvas id="chart" width="980" height="420"></canvas>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="panel-head">
+            <div>
+              <p class="section-kicker">候補</p>
+              <h2>上位候補</h2>
+            </div>
+            <div class="button-row">
+              <button type="button" id="copyCsv">CSVコピー</button>
+              <button type="button" class="secondary-button" id="downloadCsv">ダウンロード</button>
+            </div>
+          </div>
+          <div id="tableBox" class="table-wrap"></div>
+          <p id="copyStatus" class="copy-status" aria-live="polite"></p>
+        </section>
+      </section>
+
+      <section class="panel note-panel">
+        <h2>前提と確認事項</h2>
+        <ul>
+          <li>定期同額給与、不相当に高額な役員給与、事前確定届出給与、退職給与、資金繰り、金融機関評価は別途確認してください。</li>
+          <li>法人税等は概算の実効税率で置いています。顧問先ごとの資本金、所在地、所得区分、欠損金、事業税の損金算入などは反映していません。</li>
+          <li>配当は非上場会社オーナーの総合課税を主に想定しています。上場株式等の申告不要・申告分離課税比較ではありません。</li>
+          <li>社会保険料率は協会けんぽ兵庫支部の令和8年度料率を初期値にしています。健康保険・介護保険は令和8年3月分以後、子ども・子育て支援金は令和8年4月分以後の料率を通年試算用に置いています。</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
