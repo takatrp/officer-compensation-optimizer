@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>役員報酬 最適化シミュレーター</title>
-    <link rel="stylesheet" href="styles.css?v=1.1">
-    <script src="app.js?v=1.1" defer></script>
+    <link rel="stylesheet" href="styles.css?v=1.2">
+    <script src="app.js?v=1.2" defer></script>
   </head>
   <body>
     <main class="page-shell">
@@ -15,7 +15,7 @@
           <h1>役員報酬 最適化シミュレーター</h1>
           <p class="lead">役員報酬、配当、法人留保、税金、社会保険のバランスを一画面で確認します。</p>
         </div>
-        <p class="revision">v1.1</p>
+        <p class="revision">v1.2</p>
       </header>
 
       <section class="work-grid" aria-label="役員報酬の試算">
@@ -26,6 +26,31 @@
               <h2>試算条件</h2>
             </div>
             <button class="ghost-button" type="button" id="resetDefaults">初期値に戻す</button>
+          </div>
+
+          <div class="control-section">
+            <h3>方針と年分</h3>
+            <div class="field-grid">
+              <label class="field field-full" for="strategyPreset">
+                <span class="field-label">試算方針</span>
+                <select id="strategyPreset">
+                  <option value="balanced">バランス型：個人手取りと法人留保を両方見る</option>
+                  <option value="ownerTotal">総手残り最大：個人手取り＋持分相当の法人留保</option>
+                  <option value="personalCash">個人キャッシュ最大：給与・配当で個人資金を厚くする</option>
+                  <option value="companyReserve">法人資金温存：配当なしで会社に資金を残す</option>
+                  <option value="dividendUse">配当活用：役員報酬と配当を組み合わせる</option>
+                </select>
+              </label>
+
+              <label class="field" for="taxYear">
+                <span class="field-label">所得税の年分</span>
+                <select id="taxYear">
+                  <option value="r8r9">令和8・9年分</option>
+                  <option value="r10">令和10年分以後</option>
+                  <option value="r7">令和7年分</option>
+                </select>
+              </label>
+            </div>
           </div>
 
           <div class="control-section">
@@ -121,15 +146,6 @@
             <div class="control-section compact">
               <h3>個人税</h3>
               <div class="field-grid">
-                <label class="field" for="taxYear">
-                  <span class="field-label">所得税の年分</span>
-                  <select id="taxYear">
-                    <option value="r8r9">令和8・9年分</option>
-                    <option value="r10">令和10年分以後</option>
-                    <option value="r7">令和7年分</option>
-                  </select>
-                </label>
-
                 <label class="field" for="surtaxRate">
                   <span class="field-label">復興特別所得税率</span>
                   <input id="surtaxRate" type="text" inputmode="decimal" value="2.1">

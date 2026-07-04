@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.1";
+  const VERSION = "1.2";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -55,6 +55,49 @@
     "corpFixedTax","divCreditNLow","divCreditNHigh","divCreditRLow","divCreditRHigh"
   ];
 
+  const strategyPresets = Object.freeze({
+    balanced: Object.freeze({
+      objective:"ownerTotal",
+      divPolicy:"fixed",
+      fixedPayout:"30",
+      minRetained:"3,000,000",
+      noLoss:true,
+      applyDividendCredit:true
+    }),
+    ownerTotal: Object.freeze({
+      objective:"ownerTotal",
+      divPolicy:"optimize",
+      fixedPayout:"0",
+      minRetained:"0",
+      noLoss:true,
+      applyDividendCredit:true
+    }),
+    personalCash: Object.freeze({
+      objective:"personalCash",
+      divPolicy:"optimize",
+      fixedPayout:"100",
+      minRetained:"0",
+      noLoss:true,
+      applyDividendCredit:true
+    }),
+    companyReserve: Object.freeze({
+      objective:"ownerTotal",
+      divPolicy:"none",
+      fixedPayout:"0",
+      minRetained:"5,000,000",
+      noLoss:true,
+      applyDividendCredit:true
+    }),
+    dividendUse: Object.freeze({
+      objective:"personalCash",
+      divPolicy:"fixed",
+      fixedPayout:"50",
+      minRetained:"1,000,000",
+      noLoss:true,
+      applyDividendCredit:true
+    })
+  });
+
   const defaults = Object.freeze({
     preProfit:"20,000,000",
     currentMonthly:"800,000",
@@ -62,10 +105,11 @@
     step:"10,000",
     shareRate:"100",
     otherIncome:"0",
+    strategyPreset:"balanced",
     objective:"ownerTotal",
-    divPolicy:"optimize",
-    fixedPayout:"50",
-    minRetained:"0",
+    divPolicy:"fixed",
+    fixedPayout:"30",
+    minRetained:"3,000,000",
     noLoss:true,
     applyDividendCredit:true,
     taxYear:"r8r9",
@@ -841,6 +885,15 @@
     syncAllRangesFromInputs();
   }
 
+  function applyStrategyPreset(value){
+    const preset = strategyPresets[value];
+    if(!preset) return;
+    Object.entries(preset).forEach(([id, presetValue]) => setControlValue(id, presetValue));
+    formatAllInputs();
+    syncAllRangesFromInputs();
+    updateDependentControls();
+  }
+
   function syncAllRangesFromInputs(){
     document.querySelectorAll(".range[data-for]").forEach((range) => {
       syncRangeFromInput(range.dataset.for);
@@ -921,6 +974,12 @@
       });
     });
 
+    const strategySelect = document.getElementById("strategyPreset");
+    strategySelect.addEventListener("change", () => {
+      applyStrategyPreset(strategySelect.value);
+      queueUpdate();
+    });
+
     document.getElementById("resetDefaults").addEventListener("click", () => {
       applyDefaults();
       formatAllInputs();
@@ -966,6 +1025,7 @@
     VERSION,
     boot,
     defaults,
+    strategyPresets,
     defaultParams,
     createCalculator,
     parseNumber,
