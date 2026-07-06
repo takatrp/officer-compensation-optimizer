@@ -3,21 +3,26 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>役員報酬 最適化シミュレーター</title>
-    <link rel="stylesheet" href="styles.css?v=1.10">
-    <script src="app.js?v=1.10" defer></script>
+    <title>役員報酬シミュレーター</title>
+    <link rel="stylesheet" href="styles.css?v=1.11">
+    <script src="app.js?v=1.11" defer></script>
   </head>
   <body>
     <main class="page-shell">
       <header class="app-header">
-        <div>
-          <p class="eyebrow">松本会計 実務補助ツール</p>
-          <h1>役員報酬 最適化シミュレーター</h1>
-          <p class="lead">役員報酬、配当、法人留保、税金、社会保険のバランスを一画面で確認します。</p>
+        <div class="brand">
+          <a class="brand-logo" href="https://takatrp.github.io/tool-portal/" target="_blank" rel="noopener" aria-label="松本会計ツールポータル">
+            <img src="forstaff.png" alt="松本会計ツールポータル">
+          </a>
+          <div>
+            <p class="eyebrow">松本会計 実務補助ツール</p>
+            <h1>役員報酬シミュレーター</h1>
+            <p class="lead">役員報酬、配当、法人留保、税金、社会保険のバランスを一画面で確認します。</p>
+          </div>
         </div>
         <div class="header-actions">
           <button class="ghost-button manual-trigger" type="button" id="openManual">使い方</button>
-          <p class="revision">v1.10</p>
+          <p class="revision">v1.11</p>
         </div>
       </header>
 
@@ -60,6 +65,7 @@
                 <select id="roleMode">
                   <option value="single">単独役員</option>
                   <option value="coupleSplit">夫婦役員：合計報酬を固定して配分</option>
+                  <option value="coupleGrid">夫婦役員：A/Bそれぞれを探索</option>
                 </select>
               </label>
             </div>
@@ -90,6 +96,7 @@
                 <span class="field-label" id="stepLabel">探索刻み</span>
                 <input id="step" type="text" inputmode="numeric" value="50,000">
                 <input class="range" type="range" min="1000" max="100000" step="1000" data-for="step">
+                <p class="field-note" id="stepNote" hidden></p>
               </label>
 
               <label class="field" for="shareRate">
@@ -104,7 +111,7 @@
                 <input class="range" type="range" min="0" max="30000000" step="100000" data-for="otherIncome">
               </label>
 
-              <label class="field couple-only" for="coupleTotalMonthly" hidden>
+              <label class="field couple-only couple-split-only" for="coupleTotalMonthly" hidden>
                 <span class="field-label">夫婦合計月額報酬（固定）</span>
                 <input id="coupleTotalMonthly" type="text" inputmode="numeric" value="1,200,000">
                 <input class="range" type="range" min="0" max="5000000" step="10000" data-for="coupleTotalMonthly">
@@ -114,7 +121,26 @@
                 <span class="field-label">比較する役員A月額</span>
                 <input id="couplePrimaryMonthly" type="text" inputmode="numeric" value="800,000">
                 <input class="range" type="range" min="0" max="1200000" step="10000" data-for="couplePrimaryMonthly">
-                <p class="field-note">役員Bは、夫婦合計月額報酬との差額として計算します。</p>
+                <p class="field-note couple-split-only">役員Bは、夫婦合計月額報酬との差額として計算します。</p>
+              </label>
+
+              <label class="field couple-only couple-grid-only" for="coupleSpouseMonthly" hidden>
+                <span class="field-label">比較する役員B月額</span>
+                <input id="coupleSpouseMonthly" type="text" inputmode="numeric" value="400,000">
+                <input class="range" type="range" min="0" max="1200000" step="10000" data-for="coupleSpouseMonthly">
+              </label>
+
+              <label class="field couple-only couple-grid-only" for="couplePrimaryMaxMonthly" hidden>
+                <span class="field-label">役員Aの探索上限</span>
+                <input id="couplePrimaryMaxMonthly" type="text" inputmode="numeric" value="1,200,000">
+                <input class="range" type="range" min="0" max="5000000" step="10000" data-for="couplePrimaryMaxMonthly">
+              </label>
+
+              <label class="field couple-only couple-grid-only" for="coupleSpouseMaxMonthly" hidden>
+                <span class="field-label">役員Bの探索上限</span>
+                <input id="coupleSpouseMaxMonthly" type="text" inputmode="numeric" value="1,200,000">
+                <input class="range" type="range" min="0" max="5000000" step="10000" data-for="coupleSpouseMaxMonthly">
+                <p class="field-note">A/Bの組み合わせを総当たりします。候補数が増えるため、まず5万〜10万円刻みで確認してください。</p>
               </label>
 
               <label class="field couple-only" for="spouseShareRate" hidden>
@@ -444,7 +470,7 @@
           <li>定期同額給与、不相当に高額な役員給与、事前確定届出給与、退職給与、資金繰り、金融機関評価は別途確認してください。</li>
           <li>法人税等は概算の実効税率で置いています。顧問先ごとの資本金、所在地、所得区分、欠損金、事業税の損金算入などは反映していません。</li>
           <li>配当は非上場会社オーナーの総合課税を主に想定しています。上場株式等の申告不要・申告分離課税比較ではありません。</li>
-          <li>夫婦役員モードは、夫婦合計の月額役員報酬を固定し、役員Aと役員Bの配分を探索します。2人分の給与所得、社会保険、個人税を別々に概算し、世帯手取りとして合算します。</li>
+          <li>夫婦役員モードは、夫婦合計の月額役員報酬を固定して配分する方法と、役員A/Bそれぞれの月額を探索する方法を選べます。2人分の給与所得、社会保険、個人税を別々に概算し、世帯手取りとして合算します。</li>
           <li>夫婦役員モードの数式最適解は、税務上の妥当性を保証するものではありません。役員報酬は職務執行の対価として、実質的な業務内容と整合するかを別途ご確認ください。</li>
           <li>社会保険料率は協会けんぽ令和8年度の都道府県別料率を選択できます。初期値は兵庫支部です。健康保険・介護保険は令和8年3月分以後、子ども・子育て支援金は令和8年4月分以後の料率を通年試算用に置いています。</li>
           <li>報酬ゼロから低額＋配当の候補は、社会保険加入状況、住民税の細部、分配可能額を個別に確認してから採用してください。</li>
@@ -471,7 +497,7 @@
               </li>
               <li>
                 <strong>利益額、現在報酬、探索上限、持株割合を入力します。</strong>
-                <span>夫婦役員モードでは、夫婦合計月額報酬を固定し、役員Aの月額を動かして役員Bとの差額配分を比較します。</span>
+                <span>夫婦役員モードでは、合計月額を固定してA/B配分を比較する方法と、A/Bそれぞれの上限内で組み合わせを探索する方法を選べます。</span>
               </li>
               <li>
                 <strong>必要に応じて税率・社会保険料率を調整します。</strong>
@@ -497,6 +523,13 @@
           </div>
         </div>
       </dialog>
+      <footer class="app-footer">
+        © <span id="copyYear">2026</span>
+        <a href="https://www.matsumoto-kaikei.or.jp/" target="_blank" rel="noopener license">税理士法人松本会計事務所</a> ｜
+        <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="license noopener">CC BY-NC-SA 4.0</a> ｜
+        <a href="/tool-portal/terms.html" target="_blank" rel="noopener">利用条件</a> ｜
+        <span>v1.11</span>
+      </footer>
     </main>
   </body>
 </html>

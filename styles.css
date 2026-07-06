@@ -67,6 +67,31 @@ summary:focus-visible{
   padding:18px 0 14px;
 }
 
+.brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+
+.brand-logo{
+  display:grid;
+  place-items:center;
+  flex:0 0 54px;
+  width:54px;
+  height:54px;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+}
+
+.brand-logo img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
 .header-actions{
   display:flex;
   flex-wrap:wrap;
@@ -654,6 +679,24 @@ tr:last-child td{
   margin-top:6px;
 }
 
+.app-footer{
+  margin:16px 0 6px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.7;
+  text-align:center;
+}
+
+.app-footer a{
+  color:var(--brand-dark);
+  font-weight:800;
+  text-decoration:none;
+}
+
+.app-footer a:hover{
+  text-decoration:underline;
+}
+
 .manual-dialog{
   width:min(760px, calc(100% - 32px));
   max-height:min(86vh, 760px);
@@ -779,6 +822,10 @@ tr:last-child td{
 
   .header-actions{
     justify-content:flex-start;
+  }
+
+  .brand{
+    align-items:flex-start;
   }
 
   .manual-head{

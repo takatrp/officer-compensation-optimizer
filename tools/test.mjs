@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const app = require("../app.js");
 
-assert.equal(app.VERSION, "1.10");
+assert.equal(app.VERSION, "1.11");
 assert.equal(app.parseNumber("20,000,000"), 20000000);
 assert.equal(app.formatMoneyText("3000000"), "3,000,000");
 assert.equal(app.formatMoneyText("3,000,000"), "3,000,000");
@@ -84,6 +84,28 @@ assert.ok(coupleRows.length > 10);
 assert.equal(coupleRows[0].totalMonthly, 1200000);
 assert.equal(coupleRows[0].primaryMonthly + coupleRows[0].spouseMonthly, 1200000);
 
+const coupleGridParams = {
+  ...coupleParams,
+  roleMode:"coupleGrid",
+  couplePrimaryMonthly:600000,
+  coupleSpouseMonthly:400000,
+  couplePrimaryMaxMonthly:800000,
+  coupleSpouseMaxMonthly:600000,
+  step:100000
+};
+const coupleGridSample = calculator.simulateCoupleGrid(700000, 300000, 0, coupleGridParams);
+assert.equal(coupleGridSample.roleMode, "coupleGrid");
+assert.equal(coupleGridSample.primaryMonthly, 700000);
+assert.equal(coupleGridSample.spouseMonthly, 300000);
+assert.equal(coupleGridSample.totalMonthly, 1000000);
+assert.equal(coupleGridSample.people.length, 2);
+
+const coupleGridRows = calculator.runSearch("none", coupleGridParams);
+assert.ok(coupleGridRows.length > 20);
+assert.ok(coupleGridRows.every((row) => row.primaryMonthly <= 800000));
+assert.ok(coupleGridRows.every((row) => row.spouseMonthly <= 600000));
+assert.ok(new Set(coupleGridRows.map((row) => row.totalMonthly)).size > 1);
+
 const bucketed = app.bestByMonthlyBucket(rows, 100000);
 assert.ok(bucketed.length > 5);
 assert.equal(new Set(bucketed.slice(0, 12).map((row) => row.monthlyBucket)).size, 12);
@@ -92,5 +114,8 @@ assert.match(app.monthlyBucketLabel({...bucketed[0], monthlyBucket:100000, month
 const csv = app.buildCsv(rows.slice(0, 2));
 assert.ok(csv.includes("月額役員報酬"));
 assert.equal(csv.split("\n").length, 3);
+
+const coupleCsv = app.buildCsv(coupleGridRows.slice(0, 1));
+assert.ok(coupleCsv.includes("夫婦役員（個別探索）"));
 
 console.log("All tests passed.");

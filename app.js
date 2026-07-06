@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.10";
+  const VERSION = "1.11";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -87,7 +87,8 @@
 
   const moneyIds = new Set([
     "preProfit","currentMonthly","maxMonthly","step","otherIncome","minRetained",
-    "coupleTotalMonthly","couplePrimaryMonthly","spouseOtherIncome",
+    "coupleTotalMonthly","couplePrimaryMonthly","coupleSpouseMonthly",
+    "couplePrimaryMaxMonthly","coupleSpouseMaxMonthly","spouseOtherIncome",
     "residentPerCapita","otherDedN","otherDedR","spouseOtherDedN","spouseOtherDedR",
     "corpThreshold","corpFixedTax"
   ]);
@@ -100,7 +101,8 @@
 
   const controlIds = [
     "roleMode","preProfit","currentMonthly","maxMonthly","step","shareRate","otherIncome",
-    "coupleTotalMonthly","couplePrimaryMonthly","spouseShareRate","spouseOtherIncome",
+    "coupleTotalMonthly","couplePrimaryMonthly","coupleSpouseMonthly",
+    "couplePrimaryMaxMonthly","coupleSpouseMaxMonthly","spouseShareRate","spouseOtherIncome",
     "objective","divPolicy","fixedPayout","minRetained","noLoss","applyDividendCredit",
     "taxYear","surtaxRate","residentRate","residentPerCapita","otherDedN","otherDedR",
     "spouseOtherDedN","spouseOtherDedR",
@@ -167,6 +169,9 @@
     otherIncome:"0",
     coupleTotalMonthly:"1,200,000",
     couplePrimaryMonthly:"800,000",
+    coupleSpouseMonthly:"400,000",
+    couplePrimaryMaxMonthly:"1,200,000",
+    coupleSpouseMaxMonthly:"1,200,000",
     spouseShareRate:"0",
     spouseOtherIncome:"0",
     strategyPreset:"balanced",
@@ -297,6 +302,10 @@
     return Number(n).toLocaleString("ja-JP", {maximumFractionDigits:2}) + "%";
   }
 
+  function isCoupleModeValue(roleMode){
+    return roleMode === "coupleSplit" || roleMode === "coupleGrid";
+  }
+
   function standard(monthly, bands){
     if(monthly <= 0) return 0;
     for(const [lo, hi, std] of bands){
@@ -398,6 +407,9 @@
       otherIncome:parseNumber(defaults.otherIncome),
       coupleTotalMonthly:parseNumber(defaults.coupleTotalMonthly),
       couplePrimaryMonthly:parseNumber(defaults.couplePrimaryMonthly),
+      coupleSpouseMonthly:parseNumber(defaults.coupleSpouseMonthly),
+      couplePrimaryMaxMonthly:parseNumber(defaults.couplePrimaryMaxMonthly),
+      coupleSpouseMaxMonthly:parseNumber(defaults.coupleSpouseMaxMonthly),
       spouseShare:parseNumber(defaults.spouseShareRate) / 100,
       spouseOtherIncome:parseNumber(defaults.spouseOtherIncome),
       objective:defaults.objective,
@@ -435,10 +447,15 @@
   }
 
   function normalizeParams(p){
-    const roleMode = p.roleMode === "coupleSplit" ? "coupleSplit" : "single";
+    const roleMode = isCoupleModeValue(p.roleMode) ? p.roleMode : "single";
     const share = clamp(p.share, 0, 1);
     const spouseShare = clamp(p.spouseShare || 0, 0, 1);
     const coupleTotalMonthly = Math.max(0, p.coupleTotalMonthly || 0);
+    const couplePrimaryMaxMonthly = Math.max(1000, p.couplePrimaryMaxMonthly || 0);
+    const coupleSpouseMaxMonthly = Math.max(1000, p.coupleSpouseMaxMonthly || 0);
+    const couplePrimaryMonthly = roleMode === "coupleSplit"
+      ? clamp(p.couplePrimaryMonthly || 0, 0, coupleTotalMonthly)
+      : clamp(p.couplePrimaryMonthly || 0, 0, couplePrimaryMaxMonthly);
     return {
       ...p,
       roleMode,
@@ -448,7 +465,10 @@
       step:clamp(Math.round(p.step || 10000), 1000, 500000),
       share,
       coupleTotalMonthly,
-      couplePrimaryMonthly:clamp(p.couplePrimaryMonthly || 0, 0, coupleTotalMonthly),
+      couplePrimaryMonthly,
+      coupleSpouseMonthly:clamp(p.coupleSpouseMonthly || 0, 0, coupleSpouseMaxMonthly),
+      couplePrimaryMaxMonthly,
+      coupleSpouseMaxMonthly,
       spouseShare,
       spouseOtherIncome:Math.max(0, p.spouseOtherIncome || 0),
       fixedPayout:clamp(p.fixedPayout, 0, 1),
@@ -714,6 +734,19 @@
       });
     }
 
+    function simulateCoupleGrid(primaryMonthly, spouseMonthly, payoutRate, rawParams){
+      const p = normalizeParams({...rawParams, roleMode:"coupleGrid"});
+      const primaryMonthlyClamped = clamp(primaryMonthly, 0, p.couplePrimaryMaxMonthly);
+      const spouseMonthlyClamped = clamp(spouseMonthly, 0, p.coupleSpouseMaxMonthly);
+      return simulatePeople([
+        primaryPerson(primaryMonthlyClamped, p),
+        spousePerson(spouseMonthlyClamped, p)
+      ], payoutRate, p, {
+        monthly:primaryMonthlyClamped,
+        totalMonthly:primaryMonthlyClamped + spouseMonthlyClamped
+      });
+    }
+
     function payoutRatesFor(policy, p){
       if(policy === "none") return [0];
       if(policy === "all") return [1];
@@ -727,6 +760,7 @@
       const p = normalizeParams(rawParams);
       const rows = [];
       const rates = payoutRatesFor(policy, p);
+
       if(p.roleMode === "coupleSplit"){
         const totalMonthly = p.coupleTotalMonthly;
         const seen = new Set();
@@ -749,6 +783,31 @@
         return rows;
       }
 
+      if(p.roleMode === "coupleGrid"){
+        const seen = new Set();
+        const addPair = (primaryMonthly, spouseMonthly) => {
+          const primary = clamp(Math.round(primaryMonthly), 0, p.couplePrimaryMaxMonthly);
+          const spouse = clamp(Math.round(spouseMonthly), 0, p.coupleSpouseMaxMonthly);
+          const key = `${primary}:${spouse}`;
+          if(seen.has(key)) return;
+          seen.add(key);
+          for(const rate of rates){
+            const row = simulateCoupleGrid(primary, spouse, rate, p);
+            if(row.feasible) rows.push(row);
+          }
+        };
+
+        for(let primary = 0; primary <= p.couplePrimaryMaxMonthly + 0.1; primary += p.step){
+          for(let spouse = 0; spouse <= p.coupleSpouseMaxMonthly + 0.1; spouse += p.step){
+            addPair(primary, spouse);
+          }
+        }
+        addPair(p.couplePrimaryMaxMonthly, p.coupleSpouseMaxMonthly);
+
+        rows.sort((a, b) => b.metric - a.metric);
+        return rows;
+      }
+
       const maxMonthly = Math.max(p.maxMonthly, p.currentMonthly);
 
       for(let monthly = 0; monthly <= maxMonthly + 0.1; monthly += p.step){
@@ -762,7 +821,7 @@
       return rows;
     }
 
-    return {socialInsurance, corporateTax, simulate, simulatePeople, simulateCoupleSplit, payoutRatesFor, runSearch};
+    return {socialInsurance, corporateTax, simulate, simulatePeople, simulateCoupleSplit, simulateCoupleGrid, payoutRatesFor, runSearch};
   }
 
   function readParams(documentRef){
@@ -781,6 +840,9 @@
       otherIncome:n("otherIncome"),
       coupleTotalMonthly:n("coupleTotalMonthly"),
       couplePrimaryMonthly:n("couplePrimaryMonthly"),
+      coupleSpouseMonthly:n("coupleSpouseMonthly"),
+      couplePrimaryMaxMonthly:n("couplePrimaryMaxMonthly"),
+      coupleSpouseMaxMonthly:n("coupleSpouseMaxMonthly"),
       spouseShare:n("spouseShareRate") / 100,
       spouseOtherIncome:n("spouseOtherIncome"),
       objective:v("objective"),
@@ -847,7 +909,7 @@
     const startMan = Math.floor(bucketStart / 10000).toLocaleString("ja-JP");
     const endMan = Math.floor(bucketEnd / 10000).toLocaleString("ja-JP");
     const bestMan = Math.round(row.monthly / 10000).toLocaleString("ja-JP");
-    if(row.roleMode === "coupleSplit"){
+    if(isCoupleRow(row)){
       const spouseMan = Math.round(row.spouseMonthly / 10000).toLocaleString("ja-JP");
       return `A月額${startMan}万〜${endMan}万（A${bestMan}万/B${spouseMan}万が最良）`;
     }
@@ -855,7 +917,13 @@
   }
 
   function isCoupleRow(row){
-    return row?.roleMode === "coupleSplit";
+    return isCoupleModeValue(row?.roleMode);
+  }
+
+  function roleModeLabel(row){
+    if(row?.roleMode === "coupleSplit") return "夫婦役員（合計固定）";
+    if(row?.roleMode === "coupleGrid") return "夫婦役員（個別探索）";
+    return "単独役員";
   }
 
   function coupleSplitLabel(row){
@@ -888,6 +956,8 @@
     return rates
       .map((rate) => p.roleMode === "coupleSplit"
         ? calculator.simulateCoupleSplit(p.couplePrimaryMonthly, rate, p)
+        : p.roleMode === "coupleGrid"
+          ? calculator.simulateCoupleGrid(p.couplePrimaryMonthly, p.coupleSpouseMonthly, rate, p)
         : calculator.simulate(p.currentMonthly, rate, p))
       .filter((row) => row.feasible)
       .sort((a, b) => b.metric - a.metric)[0] || null;
@@ -1246,7 +1316,7 @@
     rows.forEach((row, index) => {
       lines.push([
         index + 1,
-        row.roleMode === "coupleSplit" ? "夫婦役員" : "単独役員",
+        roleModeLabel(row),
         row.monthly,
         row.primaryMonthly,
         row.spouseMonthly,
@@ -1343,9 +1413,17 @@
 
   function updateRoleModeControls(){
     const roleMode = document.getElementById("roleMode")?.value || "single";
-    const coupleMode = roleMode === "coupleSplit";
+    const coupleMode = isCoupleModeValue(roleMode);
+    const splitMode = roleMode === "coupleSplit";
+    const gridMode = roleMode === "coupleGrid";
     document.querySelectorAll(".couple-only").forEach((el) => {
       el.hidden = !coupleMode;
+    });
+    document.querySelectorAll(".couple-split-only").forEach((el) => {
+      el.hidden = !splitMode;
+    });
+    document.querySelectorAll(".couple-grid-only").forEach((el) => {
+      el.hidden = !gridMode;
     });
     document.querySelectorAll(".single-only").forEach((el) => {
       el.hidden = coupleMode;
@@ -1353,18 +1431,44 @@
 
     const totalInput = document.getElementById("coupleTotalMonthly");
     const primaryInput = document.getElementById("couplePrimaryMonthly");
+    const spouseInput = document.getElementById("coupleSpouseMonthly");
+    const primaryMaxInput = document.getElementById("couplePrimaryMaxMonthly");
+    const spouseMaxInput = document.getElementById("coupleSpouseMaxMonthly");
     const primaryRange = document.querySelector('.range[data-for="couplePrimaryMonthly"]');
+    const spouseRange = document.querySelector('.range[data-for="coupleSpouseMonthly"]');
     const stepLabel = document.getElementById("stepLabel");
+    const stepNote = document.getElementById("stepNote");
     if(stepLabel){
-      stepLabel.textContent = coupleMode ? "探索刻み（役員A月額の刻み幅）" : "探索刻み";
+      stepLabel.textContent = splitMode
+        ? "探索刻み（役員A月額の刻み幅）"
+        : gridMode
+          ? "探索刻み（A/B月額の刻み幅）"
+          : "探索刻み";
+    }
+    if(stepNote){
+      stepNote.textContent = gridMode
+        ? "A/Bそれぞれで探索するため、候補数が増えます。まず5万〜10万円刻みがおすすめです。"
+        : "";
+      stepNote.hidden = !gridMode;
     }
     if(totalInput && primaryInput && primaryRange){
       const total = Math.max(0, parseNumber(totalInput.value));
-      primaryRange.max = String(Math.max(1000, total));
-      if(parseNumber(primaryInput.value) > total){
-        primaryInput.value = formatInput("couplePrimaryMonthly", total);
+      const primaryLimit = splitMode
+        ? total
+        : Math.max(1000, parseNumber(primaryMaxInput?.value || 0));
+      primaryRange.max = String(Math.max(1000, primaryLimit));
+      if(parseNumber(primaryInput.value) > primaryLimit){
+        primaryInput.value = formatInput("couplePrimaryMonthly", primaryLimit);
       }
       syncRangeFromInput("couplePrimaryMonthly");
+    }
+    if(spouseInput && spouseRange && spouseMaxInput){
+      const spouseLimit = Math.max(1000, parseNumber(spouseMaxInput.value));
+      spouseRange.max = String(spouseLimit);
+      if(parseNumber(spouseInput.value) > spouseLimit){
+        spouseInput.value = formatInput("coupleSpouseMonthly", spouseLimit);
+      }
+      syncRangeFromInput("coupleSpouseMonthly");
     }
   }
 
@@ -1414,7 +1518,7 @@
         el.addEventListener("input", markPrefectureCustom);
         el.addEventListener("change", markPrefectureCustom);
       }
-      if(["roleMode","coupleTotalMonthly","couplePrimaryMonthly"].includes(id)){
+      if(["roleMode","coupleTotalMonthly","couplePrimaryMonthly","coupleSpouseMonthly","couplePrimaryMaxMonthly","coupleSpouseMaxMonthly"].includes(id)){
         el.addEventListener("input", updateRoleModeControls);
         el.addEventListener("change", updateRoleModeControls);
       }
@@ -1438,7 +1542,7 @@
         target.value = formatInput(range.dataset.for, Number(range.value));
         if(presetControlledIds.includes(range.dataset.for)) markStrategyCustom();
         if(range.dataset.for === "healthRate") markPrefectureCustom();
-        if(["coupleTotalMonthly","couplePrimaryMonthly"].includes(range.dataset.for)) updateRoleModeControls();
+        if(["coupleTotalMonthly","couplePrimaryMonthly","coupleSpouseMonthly","couplePrimaryMaxMonthly","coupleSpouseMaxMonthly"].includes(range.dataset.for)) updateRoleModeControls();
         queueUpdate();
       });
     });
