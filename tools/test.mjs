@@ -15,6 +15,7 @@ assert.equal(Object.keys(app.strategyPresets).length, 5);
 assert.equal(app.strategyPresets.balanced.divPolicy, "fixed");
 assert.equal(app.strategyPresets.companyReserve.divPolicy, "none");
 assert.equal(app.strategyPresets.personalCash.objective, "personalCash");
+assert.deepEqual(app.presetControlledIds, ["objective","divPolicy","fixedPayout","minRetained","noLoss","applyDividendCredit"]);
 assert.equal(app.salaryDeduction(1900000, "r7"), 650000);
 assert.equal(app.salaryDeduction(1900000, "r8r9"), 740000);
 assert.equal(app.salaryDeduction(2200000, "r8r9"), 740000);

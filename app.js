@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.4";
+  const VERSION = "1.5";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -97,6 +97,10 @@
       applyDividendCredit:true
     })
   });
+
+  const presetControlledIds = Object.freeze([
+    "objective","divPolicy","fixedPayout","minRetained","noLoss","applyDividendCredit"
+  ]);
 
   const defaults = Object.freeze({
     preProfit:"20,000,000",
@@ -939,6 +943,13 @@
     updateDependentControls();
   }
 
+  function markStrategyCustom(){
+    const strategySelect = document.getElementById("strategyPreset");
+    if(strategySelect && strategySelect.value !== "custom"){
+      strategySelect.value = "custom";
+    }
+  }
+
   function syncAllRangesFromInputs(){
     document.querySelectorAll(".range[data-for]").forEach((range) => {
       syncRangeFromInput(range.dataset.for);
@@ -997,6 +1008,10 @@
       if(!el) return;
       el.addEventListener("input", queueUpdate);
       el.addEventListener("change", queueUpdate);
+      if(presetControlledIds.includes(id)){
+        el.addEventListener("input", markStrategyCustom);
+        el.addEventListener("change", markStrategyCustom);
+      }
       if(moneyIds.has(id) || percentIds.has(id)){
         el.addEventListener("input", () => {
           if(moneyIds.has(id)) formatMoneyLive(el);
@@ -1015,6 +1030,7 @@
         const target = document.getElementById(range.dataset.for);
         if(!target) return;
         target.value = formatInput(range.dataset.for, Number(range.value));
+        if(presetControlledIds.includes(range.dataset.for)) markStrategyCustom();
         queueUpdate();
       });
     });
@@ -1071,6 +1087,7 @@
     boot,
     defaults,
     strategyPresets,
+    presetControlledIds,
     defaultParams,
     createCalculator,
     parseNumber,

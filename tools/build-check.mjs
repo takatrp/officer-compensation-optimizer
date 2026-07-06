@@ -14,10 +14,12 @@ for (const localAsset of ["styles.css", "app.js"]) {
 }
 
 assert.ok(html.includes("役員報酬 最適化シミュレーター"));
-assert.ok(html.includes("v1.4"));
+assert.ok(html.includes("v1.5"));
 assert.ok(html.includes("strategyPreset"));
 assert.ok(html.includes("バランス型"));
 assert.ok(html.includes("法人資金温存"));
+assert.ok(html.includes("カスタム：手動調整中"));
+assert.ok(html.includes("社会保険加入状況"));
 assert.ok(html.includes("法人留保"));
 assert.ok(html.includes("data-for=\"preProfit\""));
 assert.ok(html.includes("data-for=\"currentMonthly\""));
@@ -27,6 +29,8 @@ assert.ok(html.includes("国民健康保険料・国民年金保険料"));
 assert.ok(html.includes("CPI連動見直し"));
 assert.ok(html.includes("令和8年度料率"));
 assert.ok(js.includes("renderBalance"));
+assert.ok(js.includes("presetControlledIds"));
+assert.ok(js.includes("markStrategyCustom"));
 assert.ok(js.includes("row.retained"));
 assert.ok(js.includes("measureText"));
 assert.ok(js.includes("renderRecommendationReason"));
