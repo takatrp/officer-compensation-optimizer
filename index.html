@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>役員報酬 最適化シミュレーター</title>
-    <link rel="stylesheet" href="styles.css?v=1.9">
-    <script src="app.js?v=1.9" defer></script>
+    <link rel="stylesheet" href="styles.css?v=1.10">
+    <script src="app.js?v=1.10" defer></script>
   </head>
   <body>
     <main class="page-shell">
@@ -17,7 +17,7 @@
         </div>
         <div class="header-actions">
           <button class="ghost-button manual-trigger" type="button" id="openManual">使い方</button>
-          <p class="revision">v1.9</p>
+          <p class="revision">v1.10</p>
         </div>
       </header>
 
@@ -87,7 +87,7 @@
               </label>
 
               <label class="field" for="step">
-                <span class="field-label">探索刻み</span>
+                <span class="field-label" id="stepLabel">探索刻み</span>
                 <input id="step" type="text" inputmode="numeric" value="50,000">
                 <input class="range" type="range" min="1000" max="100000" step="1000" data-for="step">
               </label>
@@ -445,6 +445,7 @@
           <li>法人税等は概算の実効税率で置いています。顧問先ごとの資本金、所在地、所得区分、欠損金、事業税の損金算入などは反映していません。</li>
           <li>配当は非上場会社オーナーの総合課税を主に想定しています。上場株式等の申告不要・申告分離課税比較ではありません。</li>
           <li>夫婦役員モードは、夫婦合計の月額役員報酬を固定し、役員Aと役員Bの配分を探索します。2人分の給与所得、社会保険、個人税を別々に概算し、世帯手取りとして合算します。</li>
+          <li>夫婦役員モードの数式最適解は、税務上の妥当性を保証するものではありません。役員報酬は職務執行の対価として、実質的な業務内容と整合するかを別途ご確認ください。</li>
           <li>社会保険料率は協会けんぽ令和8年度の都道府県別料率を選択できます。初期値は兵庫支部です。健康保険・介護保険は令和8年3月分以後、子ども・子育て支援金は令和8年4月分以後の料率を通年試算用に置いています。</li>
           <li>報酬ゼロから低額＋配当の候補は、社会保険加入状況、住民税の細部、分配可能額を個別に確認してから採用してください。</li>
           <li>月額0円から低額の役員報酬案では、社会保険に加入しない場合の国民健康保険料・国民年金保険料を反映していません。実務では報酬下限の設定や別途試算で補正してください。</li>

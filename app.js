@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.9";
+  const VERSION = "1.10";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -977,6 +977,9 @@
     const shareNote = best.householdShare < 0.999
       ? `<div class="message">${coupleMode ? "夫婦持分" : "持株割合"} ${(best.householdShare * 100).toLocaleString("ja-JP", {maximumFractionDigits:1})}% のため、配当総額 ${man(best.totalDividend)} のうち${ownerDividendLabel(best)}は ${man(best.ownerDividend)} です。残りは他の株主に配当されます。</div>`
       : "";
+    const shareOverNote = coupleMode && p.share + p.spouseShare > 1.000001
+      ? '<div class="message warn">役員A/Bの持株割合合計が100%を超えています。計算上は世帯持分100%を上限に補正しています。入力値をご確認ください。</div>'
+      : "";
     const resultLabel = coupleMode ? "おすすめ月額配分" : "おすすめ月額役員報酬";
     const resultAmount = coupleMode
       ? `<span>A ${yen(best.primaryMonthly)}</span><span>B ${yen(best.spouseMonthly)}</span>`
@@ -1010,6 +1013,7 @@
 
       <div class="message ${messageClass}">${message}</div>
       <div class="message">配当なし最適：${noDivBest ? `${monthlyLabel(noDivBest)}、評価指標 ${man(noDivBest.metric)}` : "候補なし"}。 全額配当最適：${allDivBest ? `${monthlyLabel(allDivBest)}、評価指標 ${man(allDivBest.metric)}` : "候補なし"}。</div>
+      ${shareOverNote}
       ${shareNote}
     `;
   }
@@ -1350,6 +1354,10 @@
     const totalInput = document.getElementById("coupleTotalMonthly");
     const primaryInput = document.getElementById("couplePrimaryMonthly");
     const primaryRange = document.querySelector('.range[data-for="couplePrimaryMonthly"]');
+    const stepLabel = document.getElementById("stepLabel");
+    if(stepLabel){
+      stepLabel.textContent = coupleMode ? "探索刻み（役員A月額の刻み幅）" : "探索刻み";
+    }
     if(totalInput && primaryInput && primaryRange){
       const total = Math.max(0, parseNumber(totalInput.value));
       primaryRange.max = String(Math.max(1000, total));
