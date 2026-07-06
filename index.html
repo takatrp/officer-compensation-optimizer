@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>役員報酬シミュレーター</title>
-    <link rel="stylesheet" href="styles.css?v=1.11">
-    <script src="app.js?v=1.11" defer></script>
+    <link rel="stylesheet" href="styles.css?v=1.12">
+    <script src="app.js?v=1.12" defer></script>
   </head>
   <body>
     <main class="page-shell">
@@ -22,7 +22,7 @@
         </div>
         <div class="header-actions">
           <button class="ghost-button manual-trigger" type="button" id="openManual">使い方</button>
-          <p class="revision">v1.11</p>
+          <p class="revision">v1.12</p>
         </div>
       </header>
 
@@ -32,12 +32,19 @@
             <div>
               <p class="section-kicker">入力</p>
               <h2>試算条件</h2>
+              <p class="panel-note">方針、会社・役員、配当・評価の順に確認します。</p>
             </div>
             <button class="ghost-button" type="button" id="resetDefaults">初期値に戻す</button>
           </div>
 
           <div class="control-section">
-            <h3>方針と年分</h3>
+            <div class="section-heading">
+              <span class="section-index">01</span>
+              <div>
+                <h3>方針と年分</h3>
+                <p class="section-help">まず試算の目的と税制年度、役員構成を決めます。</p>
+              </div>
+            </div>
             <div class="field-grid">
               <label class="field field-full" for="strategyPreset">
                 <span class="field-label">試算方針</span>
@@ -72,14 +79,22 @@
           </div>
 
           <div class="control-section">
-            <h3>基本条件</h3>
+            <div class="section-heading">
+              <span class="section-index">02</span>
+              <div>
+                <h3>会社・役員の前提</h3>
+                <p class="section-help">会社利益、月額報酬、探索幅を入力します。</p>
+              </div>
+            </div>
             <div class="field-grid">
-              <label class="field" for="preProfit">
+              <div class="field-subhead field-full">会社側</div>
+              <label class="field field-full" for="preProfit">
                 <span class="field-label">役員報酬・会社負担社保控除前利益</span>
                 <input id="preProfit" type="text" inputmode="numeric" value="20,000,000">
                 <input class="range" type="range" min="0" max="50000000" step="100000" data-for="preProfit">
               </label>
 
+              <div class="field-subhead field-full single-only">単独役員の報酬</div>
               <label class="field single-only" for="currentMonthly">
                 <span class="field-label">比較する月額役員報酬</span>
                 <input id="currentMonthly" type="text" inputmode="numeric" value="800,000">
@@ -92,25 +107,7 @@
                 <input class="range" type="range" min="100000" max="5000000" step="10000" data-for="maxMonthly">
               </label>
 
-              <label class="field" for="step">
-                <span class="field-label" id="stepLabel">探索刻み</span>
-                <input id="step" type="text" inputmode="numeric" value="50,000">
-                <input class="range" type="range" min="1000" max="100000" step="1000" data-for="step">
-                <p class="field-note" id="stepNote" hidden></p>
-              </label>
-
-              <label class="field" for="shareRate">
-                <span class="field-label">本人/役員Aの持株割合</span>
-                <input id="shareRate" type="text" inputmode="decimal" value="100">
-                <input class="range" type="range" min="0" max="100" step="1" data-for="shareRate">
-              </label>
-
-              <label class="field" for="otherIncome">
-                <span class="field-label">本人/役員Aの他の所得金額</span>
-                <input id="otherIncome" type="text" inputmode="numeric" value="0">
-                <input class="range" type="range" min="0" max="30000000" step="100000" data-for="otherIncome">
-              </label>
-
+              <div class="field-subhead field-full couple-only" hidden>夫婦役員の報酬</div>
               <label class="field couple-only couple-split-only" for="coupleTotalMonthly" hidden>
                 <span class="field-label">夫婦合計月額報酬（固定）</span>
                 <input id="coupleTotalMonthly" type="text" inputmode="numeric" value="1,200,000">
@@ -143,6 +140,27 @@
                 <p class="field-note">A/Bの組み合わせを総当たりします。候補数が増えるため、まず5万〜10万円刻みで確認してください。</p>
               </label>
 
+              <div class="field-subhead field-full">探索幅</div>
+              <label class="field field-full" for="step">
+                <span class="field-label" id="stepLabel">探索刻み</span>
+                <input id="step" type="text" inputmode="numeric" value="50,000">
+                <input class="range" type="range" min="1000" max="100000" step="1000" data-for="step">
+                <p class="field-note" id="stepNote" hidden></p>
+              </label>
+
+              <div class="field-subhead field-full">持株・その他所得</div>
+              <label class="field" for="shareRate">
+                <span class="field-label">本人/役員Aの持株割合</span>
+                <input id="shareRate" type="text" inputmode="decimal" value="100">
+                <input class="range" type="range" min="0" max="100" step="1" data-for="shareRate">
+              </label>
+
+              <label class="field" for="otherIncome">
+                <span class="field-label">本人/役員Aの他の所得金額</span>
+                <input id="otherIncome" type="text" inputmode="numeric" value="0">
+                <input class="range" type="range" min="0" max="30000000" step="100000" data-for="otherIncome">
+              </label>
+
               <label class="field couple-only" for="spouseShareRate" hidden>
                 <span class="field-label">役員Bの持株割合</span>
                 <input id="spouseShareRate" type="text" inputmode="decimal" value="0">
@@ -158,7 +176,13 @@
           </div>
 
           <div class="control-section">
-            <h3>評価と配当</h3>
+            <div class="section-heading">
+              <span class="section-index">03</span>
+              <div>
+                <h3>評価と配当</h3>
+                <p class="section-help">おすすめ順位の基準と、配当・留保の扱いを指定します。</p>
+              </div>
+            </div>
             <div class="field-grid">
               <label class="field" for="objective">
                 <span class="field-label">評価基準</span>
@@ -204,10 +228,19 @@
           </div>
 
           <details class="advanced">
-            <summary>税率・社会保険料率を調整</summary>
+            <summary>
+              <span class="summary-index">04</span>
+              <span>詳細設定：税率・社会保険料率</span>
+            </summary>
 
             <div class="control-section compact">
-              <h3>個人税</h3>
+              <div class="section-heading compact-heading">
+                <span class="section-index">A</span>
+                <div>
+                  <h3>個人税</h3>
+                  <p class="section-help">所得税・住民税と控除額を調整します。</p>
+                </div>
+              </div>
               <div class="field-grid">
                 <label class="field" for="surtaxRate">
                   <span class="field-label">復興特別所得税率</span>
@@ -254,7 +287,13 @@
             </div>
 
             <div class="control-section compact">
-              <h3>社会保険</h3>
+              <div class="section-heading compact-heading">
+                <span class="section-index">B</span>
+                <div>
+                  <h3>社会保険</h3>
+                  <p class="section-help">協会けんぽ支部と保険料率を調整します。</p>
+                </div>
+              </div>
               <div class="field-grid">
                 <label class="field" for="prefecture">
                   <span class="field-label">協会けんぽ支部</span>
@@ -363,7 +402,13 @@
             </div>
 
             <div class="control-section compact">
-              <h3>法人税等</h3>
+              <div class="section-heading compact-heading">
+                <span class="section-index">C</span>
+                <div>
+                  <h3>法人税等</h3>
+                  <p class="section-help">実効税率、均等割、配当控除率を調整します。</p>
+                </div>
+              </div>
               <div class="field-grid">
                 <label class="field" for="corpLowRate">
                   <span class="field-label">年800万円以下部分の実効税率</span>
@@ -528,7 +573,7 @@
         <a href="https://www.matsumoto-kaikei.or.jp/" target="_blank" rel="noopener license">税理士法人松本会計事務所</a> ｜
         <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="license noopener">CC BY-NC-SA 4.0</a> ｜
         <a href="/tool-portal/terms.html" target="_blank" rel="noopener">利用条件</a> ｜
-        <span>v1.11</span>
+        <span>v1.12</span>
       </footer>
     </main>
   </body>
