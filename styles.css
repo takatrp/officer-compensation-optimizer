@@ -114,8 +114,10 @@ summary:focus-visible{
 
 h1{
   margin:0;
-  font-size:clamp(24px,3vw,34px);
-  line-height:1.2;
+  font-size:clamp(18px,2.2vw,24px);
+  line-height:1.22;
+  letter-spacing:0;
+  font-weight:900;
 }
 
 .lead{
@@ -917,5 +919,41 @@ tr:last-child td{
 
   .button-row{
     justify-content:flex-start;
+  }
+}
+
+@media print{
+  html,
+  body{
+    background:#fff;
+  }
+
+  .page-shell{
+    width:100%;
+    max-width:none;
+    padding:0;
+  }
+
+  .no-print,
+  .manual-dialog{
+    display:none!important;
+  }
+
+  .app-header{
+    padding:0 0 10px;
+  }
+
+  .panel{
+    box-shadow:none;
+    break-inside:avoid;
+  }
+
+  .work-grid,
+  .visual-grid{
+    grid-template-columns:1fr;
+  }
+
+  .result-panel{
+    break-before:auto;
   }
 }

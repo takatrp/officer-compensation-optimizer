@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.12";
+  const VERSION = "1.13";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -1590,6 +1590,10 @@
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("printPage").addEventListener("click", () => {
+      window.print();
     });
   }
 

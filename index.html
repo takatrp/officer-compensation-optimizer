@@ -3,9 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>役員報酬シミュレーター</title>
-    <link rel="stylesheet" href="styles.css?v=1.12">
-    <script src="app.js?v=1.12" defer></script>
+    <title>役員報酬検討ツール</title>
+    <link rel="icon" type="image/png" href="forstaff.png">
+    <link rel="shortcut icon" type="image/png" href="forstaff.png">
+    <link rel="apple-touch-icon" href="forstaff.png">
+    <link rel="stylesheet" href="styles.css?v=1.13">
+    <script src="app.js?v=1.13" defer></script>
   </head>
   <body>
     <main class="page-shell">
@@ -15,14 +18,14 @@
             <img src="forstaff.png" alt="松本会計ツールポータル">
           </a>
           <div>
-            <p class="eyebrow">松本会計 実務補助ツール</p>
-            <h1>役員報酬シミュレーター</h1>
+            <h1>役員報酬検討ツール</h1>
             <p class="lead">役員報酬、配当、法人留保、税金、社会保険のバランスを一画面で確認します。</p>
           </div>
         </div>
-        <div class="header-actions">
+        <div class="header-actions no-print">
           <button class="ghost-button manual-trigger" type="button" id="openManual">使い方</button>
-          <p class="revision">v1.12</p>
+          <button type="button" id="printPage">印刷</button>
+          <p class="revision">v1.13</p>
         </div>
       </header>
 
@@ -34,7 +37,7 @@
               <h2>試算条件</h2>
               <p class="panel-note">方針、会社・役員、配当・評価の順に確認します。</p>
             </div>
-            <button class="ghost-button" type="button" id="resetDefaults">初期値に戻す</button>
+            <button class="ghost-button no-print" type="button" id="resetDefaults">初期値に戻す</button>
           </div>
 
           <div class="control-section">
@@ -499,7 +502,7 @@
               <p class="section-kicker">候補</p>
               <h2>上位候補</h2>
             </div>
-            <div class="button-row">
+            <div class="button-row no-print">
               <button type="button" id="copyCsv">上位30件をコピー</button>
               <button type="button" class="secondary-button" id="downloadCsv">全候補をダウンロード</button>
             </div>
@@ -573,7 +576,7 @@
         <a href="https://www.matsumoto-kaikei.or.jp/" target="_blank" rel="noopener license">税理士法人松本会計事務所</a> ｜
         <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="license noopener">CC BY-NC-SA 4.0</a> ｜
         <a href="/tool-portal/terms.html" target="_blank" rel="noopener">利用条件</a> ｜
-        <span>v1.12</span>
+        <span>v1.13</span>
       </footer>
     </main>
   </body>
