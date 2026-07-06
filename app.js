@@ -574,6 +574,30 @@
     return Array.from(map.values()).sort((a, b) => a.monthly - b.monthly);
   }
 
+  function bestByMonthlyBucket(rows, bucketSize){
+    const map = new Map();
+    for(const row of rows){
+      const bucket = Math.floor(row.monthly / bucketSize) * bucketSize;
+      const old = map.get(bucket);
+      if(!old || row.metric > old.metric){
+        map.set(bucket, {...row, monthlyBucket:bucket, monthlyBucketSize:bucketSize});
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.metric - a.metric);
+  }
+
+  function monthlyBucketLabel(row){
+    if(!Number.isFinite(row.monthlyBucket) || !Number.isFinite(row.monthlyBucketSize)){
+      return yen(row.monthly);
+    }
+    const bucketStart = row.monthlyBucket;
+    const bucketEnd = bucketStart + row.monthlyBucketSize - 1;
+    const startMan = Math.floor(bucketStart / 10000).toLocaleString("ja-JP");
+    const endMan = Math.floor(bucketEnd / 10000).toLocaleString("ja-JP");
+    const bestMan = Math.round(row.monthly / 10000).toLocaleString("ja-JP");
+    return `月額${startMan}万〜${endMan}万（${bestMan}万が最良）`;
+  }
+
   function bestCurrentScenario(calculator, p){
     const rates = calculator.payoutRatesFor(p.divPolicy, p);
     return rates
@@ -748,14 +772,14 @@
   }
 
   function renderTable(rows){
-    latestRows = rows.slice(0, 30);
+    latestRows = rows;
     const box = document.getElementById("tableBox");
     if(!rows.length){
       box.innerHTML = '<div class="message bad">上位候補を表示できません。</div>';
       return;
     }
 
-    const top = rows.slice(0, 12);
+    const top = bestByMonthlyBucket(rows, 100000).slice(0, 12);
     box.innerHTML = `
       <table>
         <thead>
@@ -773,7 +797,7 @@
           ${top.map((row, index) => `
             <tr>
               <td>${index + 1}</td>
-              <td>${yen(row.monthly)}</td>
+              <td>${monthlyBucketLabel(row)}</td>
               <td>${pct(row.payoutRate)}</td>
               <td>${man(row.personalTakeHome)}</td>
               <td>${man(row.retained)}</td>
@@ -1050,10 +1074,10 @@
 
     document.getElementById("copyCsv").addEventListener("click", async () => {
       const status = document.getElementById("copyStatus");
-      const csv = buildCsv(latestRows);
+      const csv = buildCsv(latestRows.slice(0, 30));
       try{
         await navigator.clipboard.writeText(csv);
-        status.textContent = "CSVをコピーしました。";
+        status.textContent = "上位30件のCSVをコピーしました。";
       }catch(error){
         status.textContent = "コピーできませんでした。ダウンロードを使用してください。";
       }
@@ -1090,6 +1114,8 @@
     presetControlledIds,
     defaultParams,
     createCalculator,
+    bestByMonthlyBucket,
+    monthlyBucketLabel,
     parseNumber,
     formatMoneyText,
     formatInput,

@@ -47,6 +47,11 @@ assert.ok(rows[0].feasible);
 assert.ok(rows[0].metric >= rows[1].metric);
 assert.equal(rows[0].monthly % params.step, 0);
 
+const bucketed = app.bestByMonthlyBucket(rows, 100000);
+assert.ok(bucketed.length > 5);
+assert.equal(new Set(bucketed.slice(0, 12).map((row) => row.monthlyBucket)).size, 12);
+assert.match(app.monthlyBucketLabel({...bucketed[0], monthlyBucket:100000, monthlyBucketSize:100000, monthly:160000}), /月額10万〜19万（16万が最良）/);
+
 const csv = app.buildCsv(rows.slice(0, 2));
 assert.ok(csv.includes("月額役員報酬"));
 assert.equal(csv.split("\n").length, 3);
