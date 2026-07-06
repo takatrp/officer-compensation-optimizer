@@ -325,6 +325,12 @@ select{
   line-height:1.05;
 }
 
+.hero-result .split-amount{
+  display:grid;
+  gap:4px;
+  font-size:clamp(20px,2.2vw,29px);
+}
+
 .hero-result .sub{
   margin:8px 0 0;
   color:var(--muted);

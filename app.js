@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.8";
+  const VERSION = "1.9";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -87,21 +87,26 @@
 
   const moneyIds = new Set([
     "preProfit","currentMonthly","maxMonthly","step","otherIncome","minRetained",
-    "residentPerCapita","otherDedN","otherDedR","corpThreshold","corpFixedTax"
+    "coupleTotalMonthly","couplePrimaryMonthly","spouseOtherIncome",
+    "residentPerCapita","otherDedN","otherDedR","spouseOtherDedN","spouseOtherDedR",
+    "corpThreshold","corpFixedTax"
   ]);
 
   const percentIds = new Set([
-    "shareRate","fixedPayout","surtaxRate","residentRate","healthRate","careRate",
-    "supportRate","pensionRate","childContributionRate","corpLowRate","corpHighRate",
-    "divCreditNLow","divCreditNHigh","divCreditRLow","divCreditRHigh"
+    "shareRate","spouseShareRate","fixedPayout","surtaxRate","residentRate",
+    "healthRate","careRate","supportRate","pensionRate","childContributionRate",
+    "corpLowRate","corpHighRate","divCreditNLow","divCreditNHigh","divCreditRLow","divCreditRHigh"
   ]);
 
   const controlIds = [
-    "preProfit","currentMonthly","maxMonthly","step","shareRate","otherIncome",
+    "roleMode","preProfit","currentMonthly","maxMonthly","step","shareRate","otherIncome",
+    "coupleTotalMonthly","couplePrimaryMonthly","spouseShareRate","spouseOtherIncome",
     "objective","divPolicy","fixedPayout","minRetained","noLoss","applyDividendCredit",
     "taxYear","surtaxRate","residentRate","residentPerCapita","otherDedN","otherDedR",
+    "spouseOtherDedN","spouseOtherDedR",
     "healthRate","careRate","supportRate","pensionRate","childContributionRate",
-    "careApplicable","socialApplicable","corpLowRate","corpHighRate","corpThreshold",
+    "careApplicable","socialApplicable","spouseCareApplicable","spouseSocialApplicable",
+    "corpLowRate","corpHighRate","corpThreshold",
     "corpFixedTax","divCreditNLow","divCreditNHigh","divCreditRLow","divCreditRHigh"
   ];
 
@@ -154,11 +159,16 @@
 
   const defaults = Object.freeze({
     preProfit:"20,000,000",
+    roleMode:"single",
     currentMonthly:"800,000",
     maxMonthly:"2,000,000",
     step:"50,000",
     shareRate:"100",
     otherIncome:"0",
+    coupleTotalMonthly:"1,200,000",
+    couplePrimaryMonthly:"800,000",
+    spouseShareRate:"0",
+    spouseOtherIncome:"0",
     strategyPreset:"balanced",
     objective:"ownerTotal",
     divPolicy:"fixed",
@@ -172,6 +182,8 @@
     residentPerCapita:"5,000",
     otherDedN:"0",
     otherDedR:"0",
+    spouseOtherDedN:"0",
+    spouseOtherDedR:"0",
     prefecture:"兵庫",
     healthRate:"10.12",
     careRate:"1.62",
@@ -180,6 +192,8 @@
     childContributionRate:"0.36",
     careApplicable:true,
     socialApplicable:true,
+    spouseCareApplicable:true,
+    spouseSocialApplicable:true,
     corpLowRate:"25.0",
     corpHighRate:"34.0",
     corpThreshold:"8,000,000",
@@ -376,11 +390,16 @@
   function defaultParams(){
     return normalizeParams({
       preProfit:parseNumber(defaults.preProfit),
+      roleMode:defaults.roleMode,
       currentMonthly:parseNumber(defaults.currentMonthly),
       maxMonthly:parseNumber(defaults.maxMonthly),
       step:parseNumber(defaults.step),
       share:parseNumber(defaults.shareRate) / 100,
       otherIncome:parseNumber(defaults.otherIncome),
+      coupleTotalMonthly:parseNumber(defaults.coupleTotalMonthly),
+      couplePrimaryMonthly:parseNumber(defaults.couplePrimaryMonthly),
+      spouseShare:parseNumber(defaults.spouseShareRate) / 100,
+      spouseOtherIncome:parseNumber(defaults.spouseOtherIncome),
       objective:defaults.objective,
       divPolicy:defaults.divPolicy,
       fixedPayout:parseNumber(defaults.fixedPayout) / 100,
@@ -393,6 +412,8 @@
       residentPerCapita:parseNumber(defaults.residentPerCapita),
       otherDedN:parseNumber(defaults.otherDedN),
       otherDedR:parseNumber(defaults.otherDedR),
+      spouseOtherDedN:parseNumber(defaults.spouseOtherDedN),
+      spouseOtherDedR:parseNumber(defaults.spouseOtherDedR),
       healthRate:parseNumber(defaults.healthRate) / 100,
       careRate:parseNumber(defaults.careRate) / 100,
       supportRate:parseNumber(defaults.supportRate) / 100,
@@ -400,6 +421,8 @@
       childContributionRate:parseNumber(defaults.childContributionRate) / 100,
       careApplicable:defaults.careApplicable,
       socialApplicable:defaults.socialApplicable,
+      spouseCareApplicable:defaults.spouseCareApplicable,
+      spouseSocialApplicable:defaults.spouseSocialApplicable,
       corpLowRate:parseNumber(defaults.corpLowRate) / 100,
       corpHighRate:parseNumber(defaults.corpHighRate) / 100,
       corpThreshold:parseNumber(defaults.corpThreshold),
@@ -412,17 +435,30 @@
   }
 
   function normalizeParams(p){
+    const roleMode = p.roleMode === "coupleSplit" ? "coupleSplit" : "single";
+    const share = clamp(p.share, 0, 1);
+    const spouseShare = clamp(p.spouseShare || 0, 0, 1);
+    const coupleTotalMonthly = Math.max(0, p.coupleTotalMonthly || 0);
     return {
       ...p,
+      roleMode,
       preProfit:Math.max(0, p.preProfit),
       currentMonthly:Math.max(0, p.currentMonthly),
       maxMonthly:Math.max(1000, p.maxMonthly),
       step:clamp(Math.round(p.step || 10000), 1000, 500000),
-      share:clamp(p.share, 0, 1),
+      share,
+      coupleTotalMonthly,
+      couplePrimaryMonthly:clamp(p.couplePrimaryMonthly || 0, 0, coupleTotalMonthly),
+      spouseShare,
+      spouseOtherIncome:Math.max(0, p.spouseOtherIncome || 0),
       fixedPayout:clamp(p.fixedPayout, 0, 1),
       minRetained:Math.max(0, p.minRetained),
       surtaxRate:Math.max(0, p.surtaxRate),
       residentRate:Math.max(0, p.residentRate),
+      otherDedN:Math.max(0, p.otherDedN || 0),
+      otherDedR:Math.max(0, p.otherDedR || 0),
+      spouseOtherDedN:Math.max(0, p.spouseOtherDedN || 0),
+      spouseOtherDedR:Math.max(0, p.spouseOtherDedR || 0),
       healthRate:Math.max(0, p.healthRate),
       careRate:Math.max(0, p.careRate),
       supportRate:Math.max(0, p.supportRate),
@@ -469,25 +505,68 @@
       return tax;
     }
 
-    function simulate(monthly, payoutRate, rawParams){
-      const p = normalizeParams(rawParams);
-      const annualSalary = monthly * 12;
-      const si = socialInsurance(monthly, p);
+    function personConfig(key, label, monthly, share, otherIncome, otherDedN, otherDedR, socialApplicable, careApplicable){
+      return {
+        key,
+        label,
+        monthly:Math.max(0, monthly),
+        annualSalary:Math.max(0, monthly) * 12,
+        share:clamp(share, 0, 1),
+        otherIncome:Math.max(0, otherIncome || 0),
+        otherDedN:Math.max(0, otherDedN || 0),
+        otherDedR:Math.max(0, otherDedR || 0),
+        socialApplicable:Boolean(socialApplicable),
+        careApplicable:Boolean(careApplicable)
+      };
+    }
 
-      const companyTaxable = p.preProfit - annualSalary - si.employer;
-      const corpTax = corporateTax(companyTaxable, p);
-      const companyAfterTax = companyTaxable - corpTax;
+    function primaryPerson(monthly, p){
+      return personConfig(
+        "primary",
+        p.roleMode === "coupleSplit" ? "役員A" : "本人",
+        monthly,
+        p.share,
+        p.otherIncome,
+        p.otherDedN,
+        p.otherDedR,
+        p.socialApplicable,
+        p.careApplicable
+      );
+    }
 
-      const effectivePayout = clamp(payoutRate, 0, 1);
-      const totalDividend = companyAfterTax > 0 ? companyAfterTax * effectivePayout : 0;
-      const retained = companyAfterTax - totalDividend;
-      const ownerDividend = totalDividend * p.share;
+    function spousePerson(monthly, p){
+      return personConfig(
+        "spouse",
+        "役員B",
+        monthly,
+        p.spouseShare,
+        p.spouseOtherIncome,
+        p.spouseOtherDedN,
+        p.spouseOtherDedR,
+        p.spouseSocialApplicable,
+        p.spouseCareApplicable
+      );
+    }
 
-      const salIncome = salaryIncome(annualSalary, p.taxYear);
-      const totalIncome = salIncome + ownerDividend + p.otherIncome;
+    function personSocialInsurance(person, p){
+      return socialInsurance(monthlyForPerson(person), {
+        ...p,
+        socialApplicable:person.socialApplicable,
+        careApplicable:person.careApplicable
+      });
+    }
+
+    function monthlyForPerson(person){
+      return person.monthly;
+    }
+
+    function calculatePersonTax(person, ownerDividend, p){
+      const si = personSocialInsurance(person, p);
+      const salIncome = salaryIncome(person.annualSalary, p.taxYear);
+      const totalIncome = salIncome + ownerDividend + person.otherIncome;
 
       const basicN = basicNational(totalIncome, p.taxYear);
-      const taxableN = Math.max(0, totalIncome - si.employee - p.otherDedN - basicN);
+      const taxableN = Math.max(0, totalIncome - si.employee - person.otherDedN - basicN);
       const baseN = nationalTaxBeforeCredits(taxableN);
       const creditNRaw = p.applyDividendCredit
         ? dividendCredit(ownerDividend, taxableN, p.divCreditNLow, p.divCreditNHigh)
@@ -498,7 +577,7 @@
       const nationalTax = incomeTaxAfterCredit + surtax;
 
       const basicR = basicResident(totalIncome);
-      const taxableR = Math.max(0, totalIncome - si.employee - p.otherDedR - basicR);
+      const taxableR = Math.max(0, totalIncome - si.employee - person.otherDedR - basicR);
       const residentBefore = taxableR * p.residentRate;
       const creditRRaw = p.applyDividendCredit
         ? dividendCredit(ownerDividend, taxableR, p.divCreditRLow, p.divCreditRHigh)
@@ -507,25 +586,11 @@
       const residentTax = Math.max(0, residentBefore - creditR) + (totalIncome > 0 ? p.residentPerCapita : 0);
 
       const personalTax = nationalTax + residentTax;
-      const personalTakeHome = annualSalary + ownerDividend - si.employee - personalTax;
-      const ownerRetainedValue = retained * p.share;
-      const ownerTotal = personalTakeHome + ownerRetainedValue;
-      const metric = p.objective === "personalCash" ? personalTakeHome : ownerTotal;
-
-      const feasible =
-        (!p.noLoss || companyAfterTax >= -1) &&
-        retained >= p.minRetained - 1;
+      const personalTakeHome = person.annualSalary + ownerDividend - si.employee - personalTax;
 
       return {
-        monthly,
-        annualSalary,
-        payoutRate:effectivePayout,
-        totalDividend,
+        ...person,
         ownerDividend,
-        retained,
-        companyTaxable,
-        corpTax,
-        companyAfterTax,
         salIncome,
         totalIncome,
         employeeSI:si.employee,
@@ -539,12 +604,114 @@
         personalTax,
         creditN,
         creditR,
+        personalTakeHome
+      };
+    }
+
+    function allocateDividends(people, totalDividend){
+      const shareTotal = people.reduce((sum, person) => sum + person.share, 0);
+      const householdShare = Math.min(1, shareTotal);
+      const householdDividend = totalDividend * householdShare;
+      return people.map((person) => ({
+        person,
+        ownerDividend:shareTotal > 0 ? householdDividend * person.share / shareTotal : 0
+      }));
+    }
+
+    function simulatePeople(peopleInput, payoutRate, rawParams, meta){
+      const p = normalizeParams(rawParams);
+      const people = peopleInput.filter((person) => person.monthly > 0 || person.share > 0 || person.otherIncome > 0);
+      const totalAnnualSalary = people.reduce((sum, person) => sum + person.annualSalary, 0);
+      const socialRows = people.map((person) => ({person, si:personSocialInsurance(person, p)}));
+      const employerSI = socialRows.reduce((sum, item) => sum + item.si.employer, 0);
+
+      const companyTaxable = p.preProfit - totalAnnualSalary - employerSI;
+      const corpTax = corporateTax(companyTaxable, p);
+      const companyAfterTax = companyTaxable - corpTax;
+
+      const effectivePayout = clamp(payoutRate, 0, 1);
+      const totalDividend = companyAfterTax > 0 ? companyAfterTax * effectivePayout : 0;
+      const retained = companyAfterTax - totalDividend;
+      const allocated = allocateDividends(people, totalDividend);
+      const calculatedPeople = allocated.map(({person, ownerDividend}) => calculatePersonTax(person, ownerDividend, p));
+
+      const sum = (key) => calculatedPeople.reduce((total, person) => total + person[key], 0);
+      const annualSalary = sum("annualSalary");
+      const ownerDividend = sum("ownerDividend");
+      const employeeSI = sum("employeeSI");
+      const personalTax = sum("personalTax");
+      const personalTakeHome = sum("personalTakeHome");
+      const householdShare = Math.min(1, people.reduce((total, person) => total + person.share, 0));
+      const ownerRetainedValue = retained * householdShare;
+      const ownerTotal = personalTakeHome + ownerRetainedValue;
+      const metric = p.objective === "personalCash" ? personalTakeHome : ownerTotal;
+
+      const feasible =
+        (!p.noLoss || companyAfterTax >= -1) &&
+        retained >= p.minRetained - 1;
+
+      const primary = calculatedPeople.find((person) => person.key === "primary") || calculatedPeople[0] || null;
+      const spouse = calculatedPeople.find((person) => person.key === "spouse") || null;
+
+      return {
+        roleMode:p.roleMode,
+        monthly:meta?.monthly ?? (primary?.monthly || 0),
+        totalMonthly:meta?.totalMonthly ?? people.reduce((total, person) => total + person.monthly, 0),
+        primaryMonthly:primary?.monthly || 0,
+        spouseMonthly:spouse?.monthly || 0,
+        annualSalary,
+        primaryAnnualSalary:primary?.annualSalary || 0,
+        spouseAnnualSalary:spouse?.annualSalary || 0,
+        payoutRate:effectivePayout,
+        totalDividend,
+        ownerDividend,
+        retained,
+        householdShare,
+        companyTaxable,
+        corpTax,
+        companyAfterTax,
+        salIncome:sum("salIncome"),
+        totalIncome:sum("totalIncome"),
+        employeeSI,
+        employerSI,
+        healthStd:primary?.healthStd || 0,
+        pensionStd:primary?.pensionStd || 0,
+        taxableN:sum("taxableN"),
+        taxableR:sum("taxableR"),
+        nationalTax:sum("nationalTax"),
+        residentTax:sum("residentTax"),
+        personalTax,
+        creditN:sum("creditN"),
+        creditR:sum("creditR"),
         personalTakeHome,
         ownerRetainedValue,
         ownerTotal,
         metric,
-        feasible
+        feasible,
+        people:calculatedPeople
       };
+    }
+
+    function simulate(monthly, payoutRate, rawParams){
+      const p = normalizeParams(rawParams);
+      return simulatePeople([primaryPerson(monthly, p)], payoutRate, p, {
+        monthly,
+        totalMonthly:monthly
+      });
+    }
+
+    function simulateCoupleSplit(primaryMonthly, payoutRate, rawParams){
+      const p = normalizeParams({...rawParams, roleMode:"coupleSplit"});
+      const totalMonthly = p.coupleTotalMonthly;
+      const primaryMonthlyClamped = clamp(primaryMonthly, 0, totalMonthly);
+      const spouseMonthly = Math.max(0, totalMonthly - primaryMonthlyClamped);
+      return simulatePeople([
+        primaryPerson(primaryMonthlyClamped, p),
+        spousePerson(spouseMonthly, p)
+      ], payoutRate, p, {
+        monthly:primaryMonthlyClamped,
+        totalMonthly
+      });
     }
 
     function payoutRatesFor(policy, p){
@@ -560,6 +727,28 @@
       const p = normalizeParams(rawParams);
       const rows = [];
       const rates = payoutRatesFor(policy, p);
+      if(p.roleMode === "coupleSplit"){
+        const totalMonthly = p.coupleTotalMonthly;
+        const seen = new Set();
+        const addPrimaryMonthly = (primaryMonthly) => {
+          const normalizedMonthly = clamp(Math.round(primaryMonthly), 0, totalMonthly);
+          if(seen.has(normalizedMonthly)) return;
+          seen.add(normalizedMonthly);
+          for(const rate of rates){
+            const row = simulateCoupleSplit(normalizedMonthly, rate, p);
+            if(row.feasible) rows.push(row);
+          }
+        };
+
+        for(let monthly = 0; monthly <= totalMonthly + 0.1; monthly += p.step){
+          addPrimaryMonthly(monthly);
+        }
+        addPrimaryMonthly(totalMonthly);
+
+        rows.sort((a, b) => b.metric - a.metric);
+        return rows;
+      }
+
       const maxMonthly = Math.max(p.maxMonthly, p.currentMonthly);
 
       for(let monthly = 0; monthly <= maxMonthly + 0.1; monthly += p.step){
@@ -573,7 +762,7 @@
       return rows;
     }
 
-    return {socialInsurance, corporateTax, simulate, payoutRatesFor, runSearch};
+    return {socialInsurance, corporateTax, simulate, simulatePeople, simulateCoupleSplit, payoutRatesFor, runSearch};
   }
 
   function readParams(documentRef){
@@ -584,11 +773,16 @@
 
     return normalizeParams({
       preProfit:n("preProfit"),
+      roleMode:v("roleMode"),
       currentMonthly:n("currentMonthly"),
       maxMonthly:n("maxMonthly"),
       step:n("step"),
       share:n("shareRate") / 100,
       otherIncome:n("otherIncome"),
+      coupleTotalMonthly:n("coupleTotalMonthly"),
+      couplePrimaryMonthly:n("couplePrimaryMonthly"),
+      spouseShare:n("spouseShareRate") / 100,
+      spouseOtherIncome:n("spouseOtherIncome"),
       objective:v("objective"),
       divPolicy:v("divPolicy"),
       fixedPayout:n("fixedPayout") / 100,
@@ -601,6 +795,8 @@
       residentPerCapita:n("residentPerCapita"),
       otherDedN:n("otherDedN"),
       otherDedR:n("otherDedR"),
+      spouseOtherDedN:n("spouseOtherDedN"),
+      spouseOtherDedR:n("spouseOtherDedR"),
       healthRate:n("healthRate") / 100,
       careRate:n("careRate") / 100,
       supportRate:n("supportRate") / 100,
@@ -608,6 +804,8 @@
       childContributionRate:n("childContributionRate") / 100,
       careApplicable:checked("careApplicable"),
       socialApplicable:checked("socialApplicable"),
+      spouseCareApplicable:checked("spouseCareApplicable"),
+      spouseSocialApplicable:checked("spouseSocialApplicable"),
       corpLowRate:n("corpLowRate") / 100,
       corpHighRate:n("corpHighRate") / 100,
       corpThreshold:n("corpThreshold"),
@@ -642,20 +840,55 @@
 
   function monthlyBucketLabel(row){
     if(!Number.isFinite(row.monthlyBucket) || !Number.isFinite(row.monthlyBucketSize)){
-      return yen(row.monthly);
+      return row.roleMode === "coupleSplit" ? coupleSplitLabel(row) : yen(row.monthly);
     }
     const bucketStart = row.monthlyBucket;
     const bucketEnd = bucketStart + row.monthlyBucketSize - 1;
     const startMan = Math.floor(bucketStart / 10000).toLocaleString("ja-JP");
     const endMan = Math.floor(bucketEnd / 10000).toLocaleString("ja-JP");
     const bestMan = Math.round(row.monthly / 10000).toLocaleString("ja-JP");
+    if(row.roleMode === "coupleSplit"){
+      const spouseMan = Math.round(row.spouseMonthly / 10000).toLocaleString("ja-JP");
+      return `A月額${startMan}万〜${endMan}万（A${bestMan}万/B${spouseMan}万が最良）`;
+    }
     return `月額${startMan}万〜${endMan}万（${bestMan}万が最良）`;
+  }
+
+  function isCoupleRow(row){
+    return row?.roleMode === "coupleSplit";
+  }
+
+  function coupleSplitLabel(row){
+    return `A ${yen(row.primaryMonthly)} / B ${yen(row.spouseMonthly)}`;
+  }
+
+  function monthlyLabel(row){
+    return isCoupleRow(row) ? coupleSplitLabel(row) : yen(row.monthly);
+  }
+
+  function totalSalaryLabel(row){
+    return isCoupleRow(row) ? `合計 ${yen(row.totalMonthly)}` : yen(row.monthly);
+  }
+
+  function personalLabel(row){
+    return isCoupleRow(row) ? "世帯手取り" : "個人手取り";
+  }
+
+  function ownerDividendLabel(row){
+    return isCoupleRow(row) ? "世帯受取" : "本人受取";
+  }
+
+  function householdShareNote(row){
+    if(!isCoupleRow(row)) return "";
+    return `夫婦持分 ${(row.householdShare * 100).toLocaleString("ja-JP", {maximumFractionDigits:1})}%`;
   }
 
   function bestCurrentScenario(calculator, p){
     const rates = calculator.payoutRatesFor(p.divPolicy, p);
     return rates
-      .map((rate) => calculator.simulate(p.currentMonthly, rate, p))
+      .map((rate) => p.roleMode === "coupleSplit"
+        ? calculator.simulateCoupleSplit(p.couplePrimaryMonthly, rate, p)
+        : calculator.simulate(p.currentMonthly, rate, p))
       .filter((row) => row.feasible)
       .sort((a, b) => b.metric - a.metric)[0] || null;
   }
@@ -672,12 +905,17 @@
   }
 
   function renderRecommendationReason(best, current, p){
+    const personalName = personalLabel(best);
+    const retainedName = isCoupleRow(best) ? "夫婦持分相当の法人留保" : "持分相当の法人留保";
     const metricLine = p.objective === "ownerTotal"
-      ? `個人手取り ${man(best.personalTakeHome)} ＋ 持分相当の法人留保 ${man(best.ownerRetainedValue)} ＝ ${man(best.metric)}`
-      : `個人手取り ${man(best.personalTakeHome)} ＝ ${man(best.metric)}`;
+      ? `${personalName} ${man(best.personalTakeHome)} ＋ ${retainedName} ${man(best.ownerRetainedValue)} ＝ ${man(best.metric)}`
+      : `${personalName} ${man(best.personalTakeHome)} ＝ ${man(best.metric)}`;
     const comparisonLine = current
-      ? `比較月額比：評価指標 ${signedMan(best.metric - current.metric)}、個人手取り ${signedMan(best.personalTakeHome - current.personalTakeHome)}、法人留保 ${signedMan(best.retained - current.retained)}`
+      ? `比較案比：評価指標 ${signedMan(best.metric - current.metric)}、${personalName} ${signedMan(best.personalTakeHome - current.personalTakeHome)}、法人留保 ${signedMan(best.retained - current.retained)}`
       : "比較月額は現在の条件では候補外です。";
+    const personalDetail = isCoupleRow(best)
+      ? best.people.map((person) => `${person.label}: 給与 ${man(person.annualSalary)} ＋ 配当 ${man(person.ownerDividend)} − 個人税 ${man(person.personalTax)} − 本人社保 ${man(person.employeeSI)} ＝ ${man(person.personalTakeHome)}`).join("<br>")
+      : `給与 ${man(best.annualSalary)} ＋ 本人配当 ${man(best.ownerDividend)} − 個人税 ${man(best.personalTax)} − 本人社保 ${man(best.employeeSI)} ＝ ${man(best.personalTakeHome)}`;
 
     return `
       <div class="recommendation-reason">
@@ -689,8 +927,8 @@
             <dd>${metricLine}</dd>
           </div>
           <div>
-            <dt>個人手取り</dt>
-            <dd>給与 ${man(best.annualSalary)} ＋ 本人配当 ${man(best.ownerDividend)} − 個人税 ${man(best.personalTax)} − 本人社保 ${man(best.employeeSI)} ＝ ${man(best.personalTakeHome)}</dd>
+            <dt>${personalName}</dt>
+            <dd>${personalDetail}</dd>
           </div>
           <div>
             <dt>法人側</dt>
@@ -719,49 +957,66 @@
     }
 
     status.textContent = "計算済み";
-    const objectiveText = p.objective === "ownerTotal" ? "個人手取り＋持分相当の法人留保" : "個人キャッシュ";
+    const coupleMode = isCoupleRow(best);
+    const personalName = personalLabel(best);
+    const objectiveText = p.objective === "ownerTotal"
+      ? `${personalName}＋${coupleMode ? "夫婦" : ""}持分相当の法人留保`
+      : (coupleMode ? "世帯キャッシュ" : "個人キャッシュ");
     let messageClass = "";
     let message = "税・社会保険の概算だけで見ると、この条件では上記の月額が最も有利です。";
 
-    if(p.objective === "ownerTotal" && best.payoutRate > 0.001 && p.share >= .999){
+    if(p.objective === "ownerTotal" && best.payoutRate > 0.001 && best.householdShare >= .999){
       messageClass = "warn";
-      message = "100%オーナーで総手残りを重視する場合、配当は法人留保を個人へ移すたびに追加課税を受けます。個人資金化を重視する場面か確認してください。";
+      message = coupleMode
+        ? "夫婦で100%持分の総手残りを重視する場合、配当は法人留保を世帯へ移すたびに追加課税を受けます。個人資金化を重視する場面か確認してください。"
+        : "100%オーナーで総手残りを重視する場合、配当は法人留保を個人へ移すたびに追加課税を受けます。個人資金化を重視する場面か確認してください。";
     }else if(p.objective === "personalCash" && best.totalDividend > 0){
       messageClass = "warn";
-      message = "個人キャッシュ最大では法人留保より個人手取りを優先するため、配当が多く出やすくなります。運転資金と金融機関評価を別途確認してください。";
+      message = `${coupleMode ? "世帯" : "個人"}キャッシュ最大では法人留保より${personalName}を優先するため、配当が多く出やすくなります。運転資金と金融機関評価を別途確認してください。`;
     }
-    const shareNote = p.share < 0.999
-      ? `<div class="message">持株割合 ${(p.share * 100).toFixed(0)}% のため、配当総額 ${man(best.totalDividend)} のうち本人受取は ${man(best.ownerDividend)} です。残りは他の株主に配当されます。</div>`
+    const shareNote = best.householdShare < 0.999
+      ? `<div class="message">${coupleMode ? "夫婦持分" : "持株割合"} ${(best.householdShare * 100).toLocaleString("ja-JP", {maximumFractionDigits:1})}% のため、配当総額 ${man(best.totalDividend)} のうち${ownerDividendLabel(best)}は ${man(best.ownerDividend)} です。残りは他の株主に配当されます。</div>`
       : "";
+    const resultLabel = coupleMode ? "おすすめ月額配分" : "おすすめ月額役員報酬";
+    const resultAmount = coupleMode
+      ? `<span>A ${yen(best.primaryMonthly)}</span><span>B ${yen(best.spouseMonthly)}</span>`
+      : yen(best.monthly);
+    const resultAmountClass = coupleMode ? "amount split-amount" : "amount";
+    const resultSub = coupleMode
+      ? `合計月額 ${yen(best.totalMonthly)} ／ 年間合計 ${yen(best.annualSalary)} ／ 配当率 ${pct(best.payoutRate)} ／ 評価基準 ${objectiveText}`
+      : `年間 ${yen(best.annualSalary)} ／ 配当率 ${pct(best.payoutRate)} ／ 評価基準 ${objectiveText}`;
+    const stdText = coupleMode
+      ? `A 健保 ${man(best.people.find((person) => person.key === "primary")?.healthStd || 0)} / B 健保 ${man(best.people.find((person) => person.key === "spouse")?.healthStd || 0)}`
+      : `厚年 ${man(best.pensionStd)}`;
 
     box.innerHTML = `
       <div class="hero-result">
         <div class="recommendation-main">
-          <p class="label">おすすめ月額役員報酬</p>
-          <p class="amount">${yen(best.monthly)}</p>
-          <p class="sub">年間 ${yen(best.annualSalary)} ／ 配当率 ${pct(best.payoutRate)} ／ 評価基準 ${objectiveText}</p>
+          <p class="label">${resultLabel}</p>
+          <p class="${resultAmountClass}">${resultAmount}</p>
+          <p class="sub">${resultSub}</p>
         </div>
         ${renderRecommendationReason(best, current, p)}
       </div>
 
       <div class="metric-grid">
-        <div class="metric-card"><p class="k">個人手取り</p><p class="v">${man(best.personalTakeHome)}</p><p class="s">給与＋配当−個人税−本人社保</p></div>
+        <div class="metric-card"><p class="k">${personalName}</p><p class="v">${man(best.personalTakeHome)}</p><p class="s">給与＋配当−個人税−本人社保</p></div>
         <div class="metric-card"><p class="k">法人留保</p><p class="v">${man(best.retained)}</p><p class="s">法人税後利益−配当総額</p></div>
         <div class="metric-card"><p class="k">税・社保合計</p><p class="v">${man(best.corpTax + best.personalTax + best.employeeSI + best.employerSI)}</p><p class="s">法人税、個人税、本人・会社社保</p></div>
-        <div class="metric-card"><p class="k">配当総額</p><p class="v">${man(best.totalDividend)}</p><p class="s">本人受取 ${man(best.ownerDividend)}</p></div>
+        <div class="metric-card"><p class="k">配当総額</p><p class="v">${man(best.totalDividend)}</p><p class="s">${ownerDividendLabel(best)} ${man(best.ownerDividend)} ${householdShareNote(best)}</p></div>
         <div class="metric-card"><p class="k">法人税等</p><p class="v">${man(best.corpTax)}</p><p class="s">課税所得 ${man(best.companyTaxable)}</p></div>
-        <div class="metric-card"><p class="k">標準報酬月額</p><p class="v">${man(best.healthStd)}</p><p class="s">厚年 ${man(best.pensionStd)}</p></div>
+        <div class="metric-card"><p class="k">標準報酬月額</p><p class="v">${man(best.healthStd)}</p><p class="s">${stdText}</p></div>
       </div>
 
       <div class="message ${messageClass}">${message}</div>
-      <div class="message">配当なし最適：${noDivBest ? `月額 ${yen(noDivBest.monthly)}、評価指標 ${man(noDivBest.metric)}` : "候補なし"}。 全額配当最適：${allDivBest ? `月額 ${yen(allDivBest.monthly)}、評価指標 ${man(allDivBest.metric)}` : "候補なし"}。</div>
+      <div class="message">配当なし最適：${noDivBest ? `${monthlyLabel(noDivBest)}、評価指標 ${man(noDivBest.metric)}` : "候補なし"}。 全額配当最適：${allDivBest ? `${monthlyLabel(allDivBest)}、評価指標 ${man(allDivBest.metric)}` : "候補なし"}。</div>
       ${shareNote}
     `;
   }
 
   function balanceParts(row){
     return [
-      {key:"personal", label:"個人手取り", value:Math.max(0, row.personalTakeHome), color:balanceColors.personal},
+      {key:"personal", label:personalLabel(row), value:Math.max(0, row.personalTakeHome), color:balanceColors.personal},
       {key:"retained", label:"法人留保", value:Math.max(0, row.retained), color:balanceColors.retained},
       {key:"personalLoad", label:"個人税・本人社保", value:Math.max(0, row.personalTax + row.employeeSI), color:balanceColors.personalLoad},
       {key:"companyLoad", label:"法人税・会社社保", value:Math.max(0, row.corpTax + row.employerSI), color:balanceColors.companyLoad}
@@ -788,7 +1043,7 @@
 
     return `
       <div class="balance-row">
-        <div class="balance-head"><span>${title}</span><span>月額 ${yen(row.monthly)} ／ 配当率 ${pct(row.payoutRate)}</span></div>
+        <div class="balance-head"><span>${title}</span><span>${monthlyLabel(row)} ／ 配当率 ${pct(row.payoutRate)}</span></div>
         <div class="balance-track">${segments}</div>
         <div class="balance-legend">${legend}</div>
       </div>
@@ -818,7 +1073,7 @@
 
     const deltas = [
       {label:"評価指標の差", value:best.metric - current.metric},
-      {label:"個人手取りの差", value:best.personalTakeHome - current.personalTakeHome},
+      {label:`${personalLabel(best)}の差`, value:best.personalTakeHome - current.personalTakeHome},
       {label:"法人留保の差", value:best.retained - current.retained}
     ];
 
@@ -839,14 +1094,15 @@
     }
 
     const top = bestByMonthlyBucket(rows, 100000).slice(0, 12);
+    const coupleMode = isCoupleRow(rows[0]);
     box.innerHTML = `
       <table>
         <thead>
           <tr>
             <th>順位</th>
-            <th>月額</th>
+            <th>${coupleMode ? "配分" : "月額"}</th>
             <th>配当率</th>
-            <th>個人手取り</th>
+            <th>${coupleMode ? "世帯手取り" : "個人手取り"}</th>
             <th>法人留保</th>
             <th>総手残り</th>
             <th>税・社保</th>
@@ -968,21 +1224,28 @@
 
     ctx.fillStyle = "#667085";
     ctx.font = "12px sans-serif";
-    ctx.fillText("月額役員報酬", pad.l + w - 82, canvas.height - 18);
+    ctx.fillText(isCoupleRow(rows[0]) ? "役員A月額" : "月額役員報酬", pad.l + w - 82, canvas.height - 18);
     ctx.fillText("金額", pad.l, 18);
   }
 
   function buildCsv(rows){
     const headers = [
-      "順位","月額役員報酬","年間役員報酬","配当率","配当総額","本人配当",
+      "順位","役員構成","月額役員報酬","役員A月額","役員B月額","年間役員報酬","配当率","配当総額","本人・世帯配当",
       "個人手取り","法人留保","オーナー総手残り","法人税等","法人課税所得",
       "本人社保","会社社保","個人税","所得税等","住民税"
     ];
     const lines = [headers.join(",")];
+    const csvCell = (value) => {
+      if(typeof value === "number") return String(Math.round(value * 100) / 100);
+      return `"${String(value ?? "").replace(/"/g, '""')}"`;
+    };
     rows.forEach((row, index) => {
       lines.push([
         index + 1,
+        row.roleMode === "coupleSplit" ? "夫婦役員" : "単独役員",
         row.monthly,
+        row.primaryMonthly,
+        row.spouseMonthly,
         row.annualSalary,
         row.payoutRate,
         row.totalDividend,
@@ -997,7 +1260,7 @@
         row.personalTax,
         row.nationalTax,
         row.residentTax
-      ].map((value) => Math.round(value * 100) / 100).join(","));
+      ].map(csvCell).join(","));
     });
     return lines.join("\n");
   }
@@ -1074,6 +1337,29 @@
     });
   }
 
+  function updateRoleModeControls(){
+    const roleMode = document.getElementById("roleMode")?.value || "single";
+    const coupleMode = roleMode === "coupleSplit";
+    document.querySelectorAll(".couple-only").forEach((el) => {
+      el.hidden = !coupleMode;
+    });
+    document.querySelectorAll(".single-only").forEach((el) => {
+      el.hidden = coupleMode;
+    });
+
+    const totalInput = document.getElementById("coupleTotalMonthly");
+    const primaryInput = document.getElementById("couplePrimaryMonthly");
+    const primaryRange = document.querySelector('.range[data-for="couplePrimaryMonthly"]');
+    if(totalInput && primaryInput && primaryRange){
+      const total = Math.max(0, parseNumber(totalInput.value));
+      primaryRange.max = String(Math.max(1000, total));
+      if(parseNumber(primaryInput.value) > total){
+        primaryInput.value = formatInput("couplePrimaryMonthly", total);
+      }
+      syncRangeFromInput("couplePrimaryMonthly");
+    }
+  }
+
   function updateDependentControls(){
     const policy = document.getElementById("divPolicy")?.value;
     const fixedInput = document.getElementById("fixedPayout");
@@ -1081,6 +1367,7 @@
     const disabled = policy !== "fixed";
     if(fixedInput) fixedInput.disabled = disabled;
     if(fixedRange) fixedRange.disabled = disabled;
+    updateRoleModeControls();
   }
 
   function update(){
@@ -1119,6 +1406,10 @@
         el.addEventListener("input", markPrefectureCustom);
         el.addEventListener("change", markPrefectureCustom);
       }
+      if(["roleMode","coupleTotalMonthly","couplePrimaryMonthly"].includes(id)){
+        el.addEventListener("input", updateRoleModeControls);
+        el.addEventListener("change", updateRoleModeControls);
+      }
       if(moneyIds.has(id) || percentIds.has(id)){
         el.addEventListener("input", () => {
           if(moneyIds.has(id)) formatMoneyLive(el);
@@ -1139,6 +1430,7 @@
         target.value = formatInput(range.dataset.for, Number(range.value));
         if(presetControlledIds.includes(range.dataset.for)) markStrategyCustom();
         if(range.dataset.for === "healthRate") markPrefectureCustom();
+        if(["coupleTotalMonthly","couplePrimaryMonthly"].includes(range.dataset.for)) updateRoleModeControls();
         queueUpdate();
       });
     });

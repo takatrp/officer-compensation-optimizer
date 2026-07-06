@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const app = require("../app.js");
 
-assert.equal(app.VERSION, "1.8");
+assert.equal(app.VERSION, "1.9");
 assert.equal(app.parseNumber("20,000,000"), 20000000);
 assert.equal(app.formatMoneyText("3000000"), "3,000,000");
 assert.equal(app.formatMoneyText("3,000,000"), "3,000,000");
@@ -39,6 +39,7 @@ assert.equal(app.nationalTaxBeforeCredits(7000000), 974000);
 
 const calculator = app.createCalculator();
 const params = app.defaultParams();
+assert.equal(params.roleMode, "single");
 assert.equal(params.step, 50000);
 const sample = calculator.simulate(800000, 0, params);
 
@@ -53,6 +54,35 @@ assert.ok(rows.length > 100);
 assert.ok(rows[0].feasible);
 assert.ok(rows[0].metric >= rows[1].metric);
 assert.equal(rows[0].monthly % params.step, 0);
+
+const coupleParams = {
+  ...params,
+  roleMode:"coupleSplit",
+  coupleTotalMonthly:1200000,
+  couplePrimaryMonthly:800000,
+  minRetained:0,
+  share:0.5,
+  spouseShare:0.5,
+  spouseOtherIncome:0,
+  spouseOtherDedN:0,
+  spouseOtherDedR:0,
+  spouseCareApplicable:true,
+  spouseSocialApplicable:true
+};
+const coupleSample = calculator.simulateCoupleSplit(700000, 0, coupleParams);
+assert.equal(coupleSample.roleMode, "coupleSplit");
+assert.equal(coupleSample.primaryMonthly, 700000);
+assert.equal(coupleSample.spouseMonthly, 500000);
+assert.equal(coupleSample.totalMonthly, 1200000);
+assert.equal(coupleSample.annualSalary, 14400000);
+assert.equal(coupleSample.people.length, 2);
+assert.ok(coupleSample.employeeSI > sample.employeeSI);
+assert.ok(coupleSample.personalTakeHome > 0);
+
+const coupleRows = calculator.runSearch("none", coupleParams);
+assert.ok(coupleRows.length > 10);
+assert.equal(coupleRows[0].totalMonthly, 1200000);
+assert.equal(coupleRows[0].primaryMonthly + coupleRows[0].spouseMonthly, 1200000);
 
 const bucketed = app.bestByMonthlyBucket(rows, 100000);
 assert.ok(bucketed.length > 5);
