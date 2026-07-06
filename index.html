@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>役員報酬 最適化シミュレーター</title>
-    <link rel="stylesheet" href="styles.css?v=1.5">
-    <script src="app.js?v=1.5" defer></script>
+    <link rel="stylesheet" href="styles.css?v=1.6">
+    <script src="app.js?v=1.6" defer></script>
   </head>
   <body>
     <main class="page-shell">
@@ -15,7 +15,7 @@
           <h1>役員報酬 最適化シミュレーター</h1>
           <p class="lead">役員報酬、配当、法人留保、税金、社会保険のバランスを一画面で確認します。</p>
         </div>
-        <p class="revision">v1.5</p>
+        <p class="revision">v1.6</p>
       </header>
 
       <section class="work-grid" aria-label="役員報酬の試算">
@@ -253,25 +253,25 @@
                 </label>
 
                 <label class="field" for="divCreditNLow">
-                  <span class="field-label">配当控除 所得税 低率側</span>
+                  <span class="field-label">配当控除 所得税 (課税所得1,000万円以下部分)</span>
                   <input id="divCreditNLow" type="text" inputmode="decimal" value="10.0">
                   <input class="range" type="range" min="0" max="15" step="0.1" data-for="divCreditNLow">
                 </label>
 
                 <label class="field" for="divCreditNHigh">
-                  <span class="field-label">配当控除 所得税 高率側</span>
+                  <span class="field-label">配当控除 所得税 (課税所得1,000万円超部分)</span>
                   <input id="divCreditNHigh" type="text" inputmode="decimal" value="5.0">
                   <input class="range" type="range" min="0" max="10" step="0.1" data-for="divCreditNHigh">
                 </label>
 
                 <label class="field" for="divCreditRLow">
-                  <span class="field-label">配当控除 住民税 低率側</span>
+                  <span class="field-label">配当控除 住民税 (課税所得1,000万円以下部分)</span>
                   <input id="divCreditRLow" type="text" inputmode="decimal" value="2.8">
                   <input class="range" type="range" min="0" max="8" step="0.1" data-for="divCreditRLow">
                 </label>
 
                 <label class="field" for="divCreditRHigh">
-                  <span class="field-label">配当控除 住民税 高率側</span>
+                  <span class="field-label">配当控除 住民税 (課税所得1,000万円超部分)</span>
                   <input id="divCreditRHigh" type="text" inputmode="decimal" value="1.4">
                   <input class="range" type="range" min="0" max="5" step="0.1" data-for="divCreditRHigh">
                 </label>

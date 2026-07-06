@@ -14,7 +14,7 @@ for (const localAsset of ["styles.css", "app.js"]) {
 }
 
 assert.ok(html.includes("役員報酬 最適化シミュレーター"));
-assert.ok(html.includes("v1.5"));
+assert.ok(html.includes("v1.6"));
 assert.ok(html.includes("strategyPreset"));
 assert.ok(html.includes("バランス型"));
 assert.ok(html.includes("法人資金温存"));
@@ -26,6 +26,10 @@ assert.ok(html.includes("全候補をダウンロード"));
 assert.ok(html.includes("data-for=\"preProfit\""));
 assert.ok(html.includes("data-for=\"currentMonthly\""));
 assert.ok(html.includes("value=\"50,000\""));
+assert.ok(html.includes("配当控除 所得税 (課税所得1,000万円以下部分)"));
+assert.ok(html.includes("配当控除 所得税 (課税所得1,000万円超部分)"));
+assert.ok(html.includes("配当控除 住民税 (課税所得1,000万円以下部分)"));
+assert.ok(html.includes("配当控除 住民税 (課税所得1,000万円超部分)"));
 assert.ok(html.includes("令和8・9年分"));
 assert.ok(html.includes("令和10年分以後"));
 assert.ok(html.includes("国民健康保険料・国民年金保険料"));
