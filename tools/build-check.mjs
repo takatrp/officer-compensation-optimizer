@@ -14,7 +14,7 @@ for (const localAsset of ["styles.css", "app.js"]) {
 }
 
 assert.ok(html.includes("役員報酬 最適化シミュレーター"));
-assert.ok(html.includes("v1.7"));
+assert.ok(html.includes("v1.8"));
 assert.ok(html.includes("使い方"));
 assert.ok(html.includes("manualDialog"));
 assert.ok(html.includes("strategyPreset"));
@@ -23,6 +23,7 @@ assert.ok(html.includes("法人資金温存"));
 assert.ok(html.includes("カスタム：手動調整中"));
 assert.ok(html.includes("社会保険加入状況"));
 assert.ok(html.includes("協会けんぽ支部"));
+assert.ok(html.includes("全国一律です"));
 assert.ok(html.includes("北海道 10.28%"));
 assert.ok(html.includes("兵庫 10.12%"));
 assert.ok(html.includes("佐賀 10.55%"));
@@ -72,6 +73,7 @@ assert.ok(css.includes(".legend-dot.retained"));
 assert.ok(css.includes(".recommendation-reason"));
 assert.ok(css.includes(".reason-list"));
 assert.ok(css.includes(".header-actions"));
+assert.ok(css.includes(".field-note"));
 assert.ok(css.includes(".manual-dialog"));
 assert.ok(css.includes(".manual-steps"));
 assert.doesNotMatch(html, /<script[^>]+src=["']https?:/i);
