@@ -106,7 +106,7 @@
     preProfit:"20,000,000",
     currentMonthly:"800,000",
     maxMonthly:"2,000,000",
-    step:"10,000",
+    step:"50,000",
     shareRate:"100",
     otherIncome:"0",
     strategyPreset:"balanced",
@@ -640,7 +640,8 @@
           </div>
           <div>
             <dt>法人側</dt>
-            <dd>税引後利益 ${man(best.companyAfterTax)} − 配当総額 ${man(best.totalDividend)} ＝ 法人留保 ${man(best.retained)}</dd>
+            <dd>前利益 ${man(p.preProfit)} − 年間役員報酬 ${man(best.annualSalary)} − 会社社保 ${man(best.employerSI)} − 法人税等 ${man(best.corpTax)} ＝ 税引後利益 ${man(best.companyAfterTax)}<br>
+            税引後利益 ${man(best.companyAfterTax)} − 配当総額 ${man(best.totalDividend)} ＝ 法人留保 ${man(best.retained)}</dd>
           </div>
           <div>
             <dt>比較</dt>
@@ -675,6 +676,9 @@
       messageClass = "warn";
       message = "個人キャッシュ最大では法人留保より個人手取りを優先するため、配当が多く出やすくなります。運転資金と金融機関評価を別途確認してください。";
     }
+    const shareNote = p.share < 0.999
+      ? `<div class="message">持株割合 ${(p.share * 100).toFixed(0)}% のため、配当総額 ${man(best.totalDividend)} のうち本人受取は ${man(best.ownerDividend)} です。残りは他の株主に配当されます。</div>`
+      : "";
 
     box.innerHTML = `
       <div class="hero-result">
@@ -697,6 +701,7 @@
 
       <div class="message ${messageClass}">${message}</div>
       <div class="message">配当なし最適：${noDivBest ? `月額 ${yen(noDivBest.monthly)}、評価指標 ${man(noDivBest.metric)}` : "候補なし"}。 全額配当最適：${allDivBest ? `月額 ${yen(allDivBest.monthly)}、評価指標 ${man(allDivBest.metric)}` : "候補なし"}。</div>
+      ${shareNote}
     `;
   }
 

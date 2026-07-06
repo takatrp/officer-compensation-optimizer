@@ -33,6 +33,7 @@ assert.equal(app.nationalTaxBeforeCredits(7000000), 974000);
 
 const calculator = app.createCalculator();
 const params = app.defaultParams();
+assert.equal(params.step, 50000);
 const sample = calculator.simulate(800000, 0, params);
 
 assert.equal(sample.feasible, true);
