@@ -67,6 +67,18 @@ summary:focus-visible{
   padding:18px 0 14px;
 }
 
+.header-actions{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+}
+
+.manual-trigger{
+  min-width:74px;
+}
+
 .eyebrow,
 .section-kicker{
   margin:0 0 4px;
@@ -629,6 +641,106 @@ tr:last-child td{
   margin-top:6px;
 }
 
+.manual-dialog{
+  width:min(760px, calc(100% - 32px));
+  max-height:min(86vh, 760px);
+  border:0;
+  border-radius:10px;
+  padding:0;
+  color:var(--ink);
+  box-shadow:0 24px 64px rgba(16,24,40,.24);
+}
+
+.manual-dialog::backdrop{
+  background:rgba(16,24,40,.38);
+}
+
+.manual-card{
+  display:grid;
+  max-height:inherit;
+  overflow:hidden;
+  background:#fff;
+}
+
+.manual-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding:18px;
+  border-bottom:1px solid var(--line);
+}
+
+.manual-body{
+  overflow:auto;
+  padding:18px;
+}
+
+.manual-steps{
+  display:grid;
+  gap:10px;
+  margin:0;
+  padding:0;
+  list-style:none;
+  counter-reset:manual-step;
+}
+
+.manual-steps li{
+  position:relative;
+  display:grid;
+  gap:3px;
+  min-width:0;
+  padding:12px 12px 12px 44px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fbfcff;
+  counter-increment:manual-step;
+}
+
+.manual-steps li::before{
+  content:counter(manual-step);
+  position:absolute;
+  top:12px;
+  left:12px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:22px;
+  height:22px;
+  border-radius:999px;
+  background:#eef8f9;
+  color:var(--brand-dark);
+  font-size:12px;
+  font-weight:950;
+}
+
+.manual-steps strong{
+  font-size:13px;
+}
+
+.manual-steps span,
+.manual-note li{
+  color:#344054;
+  font-size:13px;
+}
+
+.manual-note{
+  margin-top:14px;
+  padding:14px;
+  border:1px solid #d8e7ea;
+  border-radius:8px;
+  background:#f6fbfc;
+}
+
+.manual-note ul{
+  margin:8px 0 0;
+  padding-left:1.2em;
+}
+
+.manual-note li+li{
+  margin-top:6px;
+}
+
 @media(max-width:1120px){
   .work-grid,
   .visual-grid{
@@ -649,6 +761,14 @@ tr:last-child td{
   .panel-head,
   .hero-result{
     grid-template-columns:1fr;
+    display:grid;
+  }
+
+  .header-actions{
+    justify-content:flex-start;
+  }
+
+  .manual-head{
     display:grid;
   }
 

@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.6";
+  const VERSION = "1.7";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -34,6 +34,56 @@
     [455000,485000,470000],[485000,515000,500000],[515000,545000,530000],[545000,575000,560000],[575000,605000,590000],
     [605000,635000,620000],[635000,Infinity,650000]
   ];
+
+  const prefectureRates = Object.freeze([
+    {name:"北海道", healthRate:10.28},
+    {name:"青森", healthRate:9.85},
+    {name:"岩手", healthRate:9.51},
+    {name:"宮城", healthRate:10.10},
+    {name:"秋田", healthRate:10.01},
+    {name:"山形", healthRate:9.75},
+    {name:"福島", healthRate:9.50},
+    {name:"茨城", healthRate:9.52},
+    {name:"栃木", healthRate:9.82},
+    {name:"群馬", healthRate:9.68},
+    {name:"埼玉", healthRate:9.67},
+    {name:"千葉", healthRate:9.73},
+    {name:"東京", healthRate:9.85},
+    {name:"神奈川", healthRate:9.92},
+    {name:"新潟", healthRate:9.21},
+    {name:"富山", healthRate:9.59},
+    {name:"石川", healthRate:9.70},
+    {name:"福井", healthRate:9.71},
+    {name:"山梨", healthRate:9.55},
+    {name:"長野", healthRate:9.63},
+    {name:"岐阜", healthRate:9.80},
+    {name:"静岡", healthRate:9.61},
+    {name:"愛知", healthRate:9.93},
+    {name:"三重", healthRate:9.77},
+    {name:"滋賀", healthRate:9.88},
+    {name:"京都", healthRate:9.89},
+    {name:"大阪", healthRate:10.13},
+    {name:"兵庫", healthRate:10.12},
+    {name:"奈良", healthRate:9.91},
+    {name:"和歌山", healthRate:10.06},
+    {name:"鳥取", healthRate:9.86},
+    {name:"島根", healthRate:9.94},
+    {name:"岡山", healthRate:10.05},
+    {name:"広島", healthRate:9.78},
+    {name:"山口", healthRate:10.15},
+    {name:"徳島", healthRate:10.24},
+    {name:"香川", healthRate:10.02},
+    {name:"愛媛", healthRate:9.98},
+    {name:"高知", healthRate:10.05},
+    {name:"福岡", healthRate:10.11},
+    {name:"佐賀", healthRate:10.55},
+    {name:"長崎", healthRate:10.06},
+    {name:"熊本", healthRate:10.08},
+    {name:"大分", healthRate:10.08},
+    {name:"宮崎", healthRate:9.77},
+    {name:"鹿児島", healthRate:10.13},
+    {name:"沖縄", healthRate:9.44}
+  ]);
 
   const moneyIds = new Set([
     "preProfit","currentMonthly","maxMonthly","step","otherIncome","minRetained",
@@ -122,6 +172,7 @@
     residentPerCapita:"5,000",
     otherDedN:"0",
     otherDedR:"0",
+    prefecture:"兵庫",
     healthRate:"10.12",
     careRate:"1.62",
     supportRate:"0.23",
@@ -176,6 +227,9 @@
   function formatInput(id, n){
     if(moneyIds.has(id)) return Math.round(n).toLocaleString("ja-JP");
     if(percentIds.has(id)){
+      if(["healthRate","careRate","supportRate","pensionRate","childContributionRate"].includes(id)){
+        return formatPlain(n, 2);
+      }
       const formatted = formatPlain(n, Number.isInteger(n) ? 0 : 2);
       return formatted.includes(".") ? formatted.replace(/\.?0+$/,"") : formatted;
     }
@@ -958,6 +1012,26 @@
     el.value = value;
   }
 
+  function getPrefectureRate(name){
+    return prefectureRates.find((item) => item.name === name) || null;
+  }
+
+  function applyPrefectureRate(name){
+    if(name === "custom") return;
+    const rate = getPrefectureRate(name);
+    const healthInput = document.getElementById("healthRate");
+    if(!rate || !healthInput) return;
+    healthInput.value = formatInput("healthRate", rate.healthRate);
+    syncRangeFromInput("healthRate");
+  }
+
+  function markPrefectureCustom(){
+    const prefectureSelect = document.getElementById("prefecture");
+    if(prefectureSelect && prefectureSelect.value !== "custom"){
+      prefectureSelect.value = "custom";
+    }
+  }
+
   function applyDefaults(){
     Object.entries(defaults).forEach(([id, value]) => setControlValue(id, value));
     syncAllRangesFromInputs();
@@ -1041,6 +1115,10 @@
         el.addEventListener("input", markStrategyCustom);
         el.addEventListener("change", markStrategyCustom);
       }
+      if(id === "healthRate"){
+        el.addEventListener("input", markPrefectureCustom);
+        el.addEventListener("change", markPrefectureCustom);
+      }
       if(moneyIds.has(id) || percentIds.has(id)){
         el.addEventListener("input", () => {
           if(moneyIds.has(id)) formatMoneyLive(el);
@@ -1060,9 +1138,18 @@
         if(!target) return;
         target.value = formatInput(range.dataset.for, Number(range.value));
         if(presetControlledIds.includes(range.dataset.for)) markStrategyCustom();
+        if(range.dataset.for === "healthRate") markPrefectureCustom();
         queueUpdate();
       });
     });
+
+    const prefectureSelect = document.getElementById("prefecture");
+    if(prefectureSelect){
+      prefectureSelect.addEventListener("change", () => {
+        applyPrefectureRate(prefectureSelect.value);
+        queueUpdate();
+      });
+    }
 
     const strategySelect = document.getElementById("strategyPreset");
     strategySelect.addEventListener("change", () => {
@@ -1102,10 +1189,32 @@
     });
   }
 
+  function bindManualDialog(){
+    const dialog = document.getElementById("manualDialog");
+    const openButton = document.getElementById("openManual");
+    const closeButton = document.getElementById("closeManual");
+    if(!dialog || !openButton || !closeButton) return;
+
+    const close = () => {
+      if(typeof dialog.close === "function") dialog.close();
+      else dialog.removeAttribute("open");
+    };
+
+    openButton.addEventListener("click", () => {
+      if(typeof dialog.showModal === "function") dialog.showModal();
+      else dialog.setAttribute("open", "");
+    });
+    closeButton.addEventListener("click", close);
+    dialog.addEventListener("click", (event) => {
+      if(event.target === dialog) close();
+    });
+  }
+
   function boot(){
     syncAllRangesFromInputs();
     formatAllInputs();
     bindControls();
+    bindManualDialog();
     updateDependentControls();
     document.getElementById("divPolicy").addEventListener("change", updateDependentControls);
     update();
@@ -1115,6 +1224,8 @@
     VERSION,
     boot,
     defaults,
+    prefectureRates,
+    getPrefectureRate,
     strategyPresets,
     presetControlledIds,
     defaultParams,
