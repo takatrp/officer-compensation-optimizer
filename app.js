@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.14";
+  const VERSION = "1.15";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -86,7 +86,7 @@
   ]);
 
   const moneyIds = new Set([
-    "preProfit","currentMonthly","maxMonthly","step","otherIncome","minRetained",
+    "preProfit","currentMonthly","maxMonthly","step","otherIncome","targetRetained","minRetained",
     "coupleTotalMonthly","couplePrimaryMonthly","coupleSpouseMonthly",
     "couplePrimaryMaxMonthly","coupleSpouseMaxMonthly","spouseOtherIncome",
     "residentPerCapita","otherDedN","otherDedR","spouseOtherDedN","spouseOtherDedR",
@@ -103,7 +103,7 @@
     "roleMode","preProfit","currentMonthly","maxMonthly","step","shareRate","otherIncome",
     "coupleTotalMonthly","couplePrimaryMonthly","coupleSpouseMonthly",
     "couplePrimaryMaxMonthly","coupleSpouseMaxMonthly","spouseShareRate","spouseOtherIncome",
-    "objective","divPolicy","fixedPayout","minRetained","noLoss","applyDividendCredit",
+    "objective","divPolicy","fixedPayout","targetRetained","minRetained","noLoss","applyDividendCredit",
     "taxYear","surtaxRate","residentRate","residentPerCapita","otherDedN","otherDedR",
     "spouseOtherDedN","spouseOtherDedR",
     "healthRate","careRate","supportRate","pensionRate","childContributionRate",
@@ -117,7 +117,17 @@
       objective:"ownerTotal",
       divPolicy:"fixed",
       fixedPayout:"30",
+      targetRetained:"5,000,000",
       minRetained:"3,000,000",
+      noLoss:true,
+      applyDividendCredit:true
+    }),
+    retainedTarget: Object.freeze({
+      objective:"retainedTarget",
+      divPolicy:"optimize",
+      fixedPayout:"0",
+      targetRetained:"5,000,000",
+      minRetained:"0",
       noLoss:true,
       applyDividendCredit:true
     }),
@@ -125,6 +135,7 @@
       objective:"ownerTotal",
       divPolicy:"optimize",
       fixedPayout:"0",
+      targetRetained:"5,000,000",
       minRetained:"0",
       noLoss:true,
       applyDividendCredit:true
@@ -133,6 +144,7 @@
       objective:"personalCash",
       divPolicy:"optimize",
       fixedPayout:"100",
+      targetRetained:"0",
       minRetained:"0",
       noLoss:true,
       applyDividendCredit:true
@@ -141,6 +153,7 @@
       objective:"ownerTotal",
       divPolicy:"none",
       fixedPayout:"0",
+      targetRetained:"5,000,000",
       minRetained:"5,000,000",
       noLoss:true,
       applyDividendCredit:true
@@ -149,6 +162,7 @@
       objective:"personalCash",
       divPolicy:"fixed",
       fixedPayout:"50",
+      targetRetained:"3,000,000",
       minRetained:"1,000,000",
       noLoss:true,
       applyDividendCredit:true
@@ -156,7 +170,7 @@
   });
 
   const presetControlledIds = Object.freeze([
-    "objective","divPolicy","fixedPayout","minRetained","noLoss","applyDividendCredit"
+    "objective","divPolicy","fixedPayout","targetRetained","minRetained","noLoss","applyDividendCredit"
   ]);
 
   const defaults = Object.freeze({
@@ -178,6 +192,7 @@
     objective:"ownerTotal",
     divPolicy:"fixed",
     fixedPayout:"30",
+    targetRetained:"5,000,000",
     minRetained:"3,000,000",
     noLoss:true,
     applyDividendCredit:true,
@@ -415,6 +430,7 @@
       objective:defaults.objective,
       divPolicy:defaults.divPolicy,
       fixedPayout:parseNumber(defaults.fixedPayout) / 100,
+      targetRetained:parseNumber(defaults.targetRetained),
       minRetained:parseNumber(defaults.minRetained),
       noLoss:defaults.noLoss,
       applyDividendCredit:defaults.applyDividendCredit,
@@ -472,6 +488,7 @@
       spouseShare,
       spouseOtherIncome:Math.max(0, p.spouseOtherIncome || 0),
       fixedPayout:clamp(p.fixedPayout, 0, 1),
+      targetRetained:Math.max(0, p.targetRetained || 0),
       minRetained:Math.max(0, p.minRetained),
       surtaxRate:Math.max(0, p.surtaxRate),
       residentRate:Math.max(0, p.residentRate),
@@ -493,6 +510,23 @@
       divCreditRLow:Math.max(0, p.divCreditRLow),
       divCreditRHigh:Math.max(0, p.divCreditRHigh)
     };
+  }
+
+  function compareRows(a, b){
+    if(!a) return 1;
+    if(!b) return -1;
+    if(a.objective === "retainedTarget" || b.objective === "retainedTarget"){
+      const gapDiff = (a.retainedGap ?? Infinity) - (b.retainedGap ?? Infinity);
+      if(Math.abs(gapDiff) > 1) return gapDiff;
+      const personalDiff = b.personalTakeHome - a.personalTakeHome;
+      if(Math.abs(personalDiff) > 1) return personalDiff;
+      return b.ownerTotal - a.ownerTotal;
+    }
+    return b.metric - a.metric;
+  }
+
+  function rowIsBetter(candidate, current){
+    return !current || compareRows(candidate, current) < 0;
   }
 
   function createCalculator(){
@@ -665,6 +699,7 @@
       const ownerRetainedValue = retained * householdShare;
       const ownerTotal = personalTakeHome + ownerRetainedValue;
       const metric = p.objective === "personalCash" ? personalTakeHome : ownerTotal;
+      const retainedGap = Math.abs(retained - p.targetRetained);
 
       const feasible =
         (!p.noLoss || companyAfterTax >= -1) &&
@@ -707,6 +742,9 @@
         ownerRetainedValue,
         ownerTotal,
         metric,
+        objective:p.objective,
+        targetRetained:p.targetRetained,
+        retainedGap,
         feasible,
         people:calculatedPeople
       };
@@ -779,7 +817,7 @@
         }
         addPrimaryMonthly(totalMonthly);
 
-        rows.sort((a, b) => b.metric - a.metric);
+        rows.sort(compareRows);
         return rows;
       }
 
@@ -804,7 +842,7 @@
         }
         addPair(p.couplePrimaryMaxMonthly, p.coupleSpouseMaxMonthly);
 
-        rows.sort((a, b) => b.metric - a.metric);
+        rows.sort(compareRows);
         return rows;
       }
 
@@ -817,7 +855,7 @@
         }
       }
 
-      rows.sort((a, b) => b.metric - a.metric);
+      rows.sort(compareRows);
       return rows;
     }
 
@@ -848,6 +886,7 @@
       objective:v("objective"),
       divPolicy:v("divPolicy"),
       fixedPayout:n("fixedPayout") / 100,
+      targetRetained:n("targetRetained"),
       minRetained:n("minRetained"),
       noLoss:checked("noLoss"),
       applyDividendCredit:checked("applyDividendCredit"),
@@ -883,7 +922,7 @@
     const map = new Map();
     for(const row of rows){
       const old = map.get(row.monthly);
-      if(!old || row.metric > old.metric) map.set(row.monthly, row);
+      if(rowIsBetter(row, old)) map.set(row.monthly, row);
     }
     return Array.from(map.values()).sort((a, b) => a.monthly - b.monthly);
   }
@@ -893,11 +932,11 @@
     for(const row of rows){
       const bucket = Math.floor(row.monthly / bucketSize) * bucketSize;
       const old = map.get(bucket);
-      if(!old || row.metric > old.metric){
+      if(rowIsBetter(row, old)){
         map.set(bucket, {...row, monthlyBucket:bucket, monthlyBucketSize:bucketSize});
       }
     }
-    return Array.from(map.values()).sort((a, b) => b.metric - a.metric);
+    return Array.from(map.values()).sort(compareRows);
   }
 
   function monthlyBucketLabel(row){
@@ -960,7 +999,7 @@
           ? calculator.simulateCoupleGrid(p.couplePrimaryMonthly, p.coupleSpouseMonthly, rate, p)
         : calculator.simulate(p.currentMonthly, rate, p))
       .filter((row) => row.feasible)
-      .sort((a, b) => b.metric - a.metric)[0] || null;
+      .sort(compareRows)[0] || null;
   }
 
   function classifyDelta(n){
@@ -977,11 +1016,16 @@
   function renderRecommendationReason(best, current, p){
     const personalName = personalLabel(best);
     const retainedName = isCoupleRow(best) ? "夫婦持分相当の法人留保" : "持分相当の法人留保";
-    const metricLine = p.objective === "ownerTotal"
-      ? `${personalName} ${man(best.personalTakeHome)} ＋ ${retainedName} ${man(best.ownerRetainedValue)} ＝ ${man(best.metric)}`
-      : `${personalName} ${man(best.personalTakeHome)} ＝ ${man(best.metric)}`;
+    const retainedTargetMode = p.objective === "retainedTarget";
+    const metricLine = retainedTargetMode
+      ? `目標 ${man(p.targetRetained)} に対して法人留保 ${man(best.retained)}（差額 ${signedMan(best.retained - p.targetRetained)}）`
+      : p.objective === "ownerTotal"
+        ? `${personalName} ${man(best.personalTakeHome)} ＋ ${retainedName} ${man(best.ownerRetainedValue)} ＝ ${man(best.metric)}`
+        : `${personalName} ${man(best.personalTakeHome)} ＝ ${man(best.metric)}`;
     const comparisonLine = current
-      ? `比較案比：評価指標 ${signedMan(best.metric - current.metric)}、${personalName} ${signedMan(best.personalTakeHome - current.personalTakeHome)}、法人留保 ${signedMan(best.retained - current.retained)}`
+      ? retainedTargetMode
+        ? `比較案比：目標差額 ${man(current.retainedGap)} → ${man(best.retainedGap)}（改善 ${signedMan(current.retainedGap - best.retainedGap)}）、${personalName} ${signedMan(best.personalTakeHome - current.personalTakeHome)}`
+        : `比較案比：評価指標 ${signedMan(best.metric - current.metric)}、${personalName} ${signedMan(best.personalTakeHome - current.personalTakeHome)}、法人留保 ${signedMan(best.retained - current.retained)}`
       : "比較月額は現在の条件では候補外です。";
     const personalDetail = isCoupleRow(best)
       ? best.people.map((person) => `${person.label}: 給与 ${man(person.annualSalary)} ＋ 配当 ${man(person.ownerDividend)} − 個人税 ${man(person.personalTax)} − 本人社保 ${man(person.employeeSI)} ＝ ${man(person.personalTakeHome)}`).join("<br>")
@@ -990,10 +1034,10 @@
     return `
       <div class="recommendation-reason">
         <p class="reason-title">なぜこの金額か</p>
-        <p class="reason-lead">探索条件を満たす候補のうち、評価指標が最も高い月額です。</p>
+        <p class="reason-lead">${retainedTargetMode ? "法人に残したい目標留保に最も近く、同程度なら手取りが大きい候補です。" : "探索条件を満たす候補のうち、評価指標が最も高い月額です。"}</p>
         <dl class="reason-list">
           <div>
-            <dt>評価指標</dt>
+            <dt>${retainedTargetMode ? "目標法人留保" : "評価指標"}</dt>
             <dd>${metricLine}</dd>
           </div>
           <div>
@@ -1014,6 +1058,14 @@
     `;
   }
 
+  function scenarioSummary(row, p){
+    if(!row) return "候補なし";
+    if(p.objective === "retainedTarget"){
+      return `${monthlyLabel(row)}、法人留保 ${man(row.retained)}、目標差額 ${man(row.retainedGap)}`;
+    }
+    return `${monthlyLabel(row)}、評価指標 ${man(row.metric)}`;
+  }
+
   function renderResult(best, current, noDivBest, allDivBest, p){
     const box = document.getElementById("resultBox");
     const status = document.getElementById("calcStatus");
@@ -1029,13 +1081,18 @@
     status.textContent = "計算済み";
     const coupleMode = isCoupleRow(best);
     const personalName = personalLabel(best);
-    const objectiveText = p.objective === "ownerTotal"
+    const retainedTargetMode = p.objective === "retainedTarget";
+    const objectiveText = retainedTargetMode
+      ? `法人留保 ${man(p.targetRetained)} から逆算`
+      : p.objective === "ownerTotal"
       ? `${personalName}＋${coupleMode ? "夫婦" : ""}持分相当の法人留保`
       : (coupleMode ? "世帯キャッシュ" : "個人キャッシュ");
     let messageClass = "";
     let message = "税・社会保険の概算だけで見ると、この条件では上記の月額が最も有利です。";
 
-    if(p.objective === "ownerTotal" && best.payoutRate > 0.001 && best.householdShare >= .999){
+    if(retainedTargetMode){
+      message = `法人留保目標 ${man(p.targetRetained)} に対して、この候補の法人留保は ${man(best.retained)}（差額 ${signedMan(best.retained - p.targetRetained)}）です。`;
+    }else if(p.objective === "ownerTotal" && best.payoutRate > 0.001 && best.householdShare >= .999){
       messageClass = "warn";
       message = coupleMode
         ? "夫婦で100%持分の総手残りを重視する場合、配当は法人留保を世帯へ移すたびに追加課税を受けます。個人資金化を重視する場面か確認してください。"
@@ -1082,7 +1139,7 @@
       </div>
 
       <div class="message ${messageClass}">${message}</div>
-      <div class="message">配当なし最適：${noDivBest ? `${monthlyLabel(noDivBest)}、評価指標 ${man(noDivBest.metric)}` : "候補なし"}。 全額配当最適：${allDivBest ? `${monthlyLabel(allDivBest)}、評価指標 ${man(allDivBest.metric)}` : "候補なし"}。</div>
+      <div class="message">配当なし最適：${scenarioSummary(noDivBest, p)}。 全額配当最適：${scenarioSummary(allDivBest, p)}。</div>
       ${shareOverNote}
       ${shareNote}
     `;
@@ -1145,8 +1202,11 @@
       return;
     }
 
+    const retainedTargetMode = best.objective === "retainedTarget";
     const deltas = [
-      {label:"評価指標の差", value:best.metric - current.metric},
+      retainedTargetMode
+        ? {label:"目標差額の改善", value:current.retainedGap - best.retainedGap}
+        : {label:"評価指標の差", value:best.metric - current.metric},
       {label:`${personalLabel(best)}の差`, value:best.personalTakeHome - current.personalTakeHome},
       {label:"法人留保の差", value:best.retained - current.retained}
     ];
@@ -1169,6 +1229,7 @@
 
     const top = bestByMonthlyBucket(rows, 100000).slice(0, 12);
     const coupleMode = isCoupleRow(rows[0]);
+    const retainedTargetMode = rows[0]?.objective === "retainedTarget";
     box.innerHTML = `
       <table>
         <thead>
@@ -1178,6 +1239,7 @@
             <th>配当率</th>
             <th>${coupleMode ? "世帯手取り" : "個人手取り"}</th>
             <th>法人留保</th>
+            ${retainedTargetMode ? "<th>目標差額</th>" : ""}
             <th>総手残り</th>
             <th>税・社保</th>
           </tr>
@@ -1190,6 +1252,7 @@
               <td>${pct(row.payoutRate)}</td>
               <td>${man(row.personalTakeHome)}</td>
               <td>${man(row.retained)}</td>
+              ${retainedTargetMode ? `<td>${man(row.retainedGap)}</td>` : ""}
               <td>${man(row.ownerTotal)}</td>
               <td>${man(row.corpTax + row.personalTax + row.employeeSI + row.employerSI)}</td>
             </tr>
@@ -1199,7 +1262,7 @@
     `;
   }
 
-  function drawChart(rows, current){
+  function drawChart(rows, current, p){
     const canvas = document.getElementById("chart");
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1217,6 +1280,7 @@
     const h = canvas.height - pad.t - pad.b;
     const xs = series.map((row) => row.monthly);
     const values = series.flatMap((row) => [row.metric, row.personalTakeHome, row.retained]);
+    if(p.targetRetained > 0) values.push(p.targetRetained);
     const xmin = Math.min(...xs);
     const xmax = Math.max(...xs);
     const ymin = Math.min(...values);
@@ -1266,9 +1330,24 @@
     drawLine((row) => row.retained, "#6d4aff", 2);
     drawLine((row) => row.metric, "#2458d3", 3);
 
+    if(p.targetRetained > 0){
+      const targetY = yScale(p.targetRetained);
+      ctx.strokeStyle = "#b45309";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(pad.l, targetY);
+      ctx.lineTo(pad.l + w, targetY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#b45309";
+      ctx.font = "12px sans-serif";
+      ctx.fillText("目標留保", pad.l + 8, targetY - 8);
+    }
+
     const best = rows[0];
     const bestX = xScale(best.monthly);
-    const bestY = yScale(best.metric);
+    const bestY = yScale(best.objective === "retainedTarget" ? best.retained : best.metric);
     ctx.fillStyle = "#2458d3";
     ctx.beginPath();
     ctx.arc(bestX, bestY, 5, 0, Math.PI * 2);
@@ -1305,7 +1384,7 @@
   function buildCsv(rows){
     const headers = [
       "順位","役員構成","月額役員報酬","役員A月額","役員B月額","年間役員報酬","配当率","配当総額","本人・世帯配当",
-      "個人手取り","法人留保","オーナー総手残り","法人税等","法人課税所得",
+      "個人手取り","法人留保","目標法人留保","目標差額","オーナー総手残り","法人税等","法人課税所得",
       "本人社保","会社社保","個人税","所得税等","住民税"
     ];
     const lines = [headers.join(",")];
@@ -1326,6 +1405,8 @@
         row.ownerDividend,
         row.personalTakeHome,
         row.retained,
+        row.targetRetained,
+        row.retainedGap,
         row.ownerTotal,
         row.corpTax,
         row.companyTaxable,
@@ -1496,7 +1577,7 @@
     renderBalance(best, current);
     renderDelta(best, current);
     renderTable(rows);
-    drawChart(rows, current);
+    drawChart(rows, current, p);
   }
 
   function queueUpdate(){

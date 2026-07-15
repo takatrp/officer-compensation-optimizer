@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const app = require("../app.js");
 
-assert.equal(app.VERSION, "1.14");
+assert.equal(app.VERSION, "1.15");
 assert.equal(app.parseNumber("20,000,000"), 20000000);
 assert.equal(app.formatMoneyText("3000000"), "3,000,000");
 assert.equal(app.formatMoneyText("3,000,000"), "3,000,000");
@@ -17,11 +17,12 @@ assert.equal(app.prefectureRates.length, 47);
 assert.equal(app.getPrefectureRate("兵庫").healthRate, 10.12);
 assert.equal(app.getPrefectureRate("佐賀").healthRate, 10.55);
 assert.equal(app.getPrefectureRate("存在しない支部"), null);
-assert.equal(Object.keys(app.strategyPresets).length, 5);
+assert.equal(Object.keys(app.strategyPresets).length, 6);
 assert.equal(app.strategyPresets.balanced.divPolicy, "fixed");
+assert.equal(app.strategyPresets.retainedTarget.objective, "retainedTarget");
 assert.equal(app.strategyPresets.companyReserve.divPolicy, "none");
 assert.equal(app.strategyPresets.personalCash.objective, "personalCash");
-assert.deepEqual(app.presetControlledIds, ["objective","divPolicy","fixedPayout","minRetained","noLoss","applyDividendCredit"]);
+assert.deepEqual(app.presetControlledIds, ["objective","divPolicy","fixedPayout","targetRetained","minRetained","noLoss","applyDividendCredit"]);
 assert.equal(app.salaryDeduction(1900000, "r7"), 650000);
 assert.equal(app.salaryDeduction(1900000, "r8r9"), 740000);
 assert.equal(app.salaryDeduction(2200000, "r8r9"), 740000);
@@ -54,6 +55,18 @@ assert.ok(rows.length > 100);
 assert.ok(rows[0].feasible);
 assert.ok(rows[0].metric >= rows[1].metric);
 assert.equal(rows[0].monthly % params.step, 0);
+
+const retainedTargetParams = {
+  ...params,
+  objective:"retainedTarget",
+  divPolicy:"optimize",
+  targetRetained:5000000,
+  minRetained:0
+};
+const retainedTargetRows = calculator.runSearch("optimize", retainedTargetParams);
+assert.ok(retainedTargetRows.length > 100);
+assert.ok(retainedTargetRows[0].retainedGap <= retainedTargetRows[1].retainedGap + 1);
+assert.ok(Math.abs(retainedTargetRows[0].retained - retainedTargetParams.targetRetained) <= retainedTargetRows[0].retainedGap + 1);
 
 const coupleParams = {
   ...params,

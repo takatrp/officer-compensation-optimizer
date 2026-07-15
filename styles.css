@@ -689,6 +689,7 @@ canvas{
 .legend-dot.metric{background:var(--blue)}
 .legend-dot.cash{background:var(--green)}
 .legend-dot.retained{background:var(--violet)}
+.legend-dot.target{background:var(--amber)}
 
 .table-wrap{
   overflow:auto;

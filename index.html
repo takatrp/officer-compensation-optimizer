@@ -7,8 +7,8 @@
     <link rel="icon" type="image/png" href="forstaff.png">
     <link rel="shortcut icon" type="image/png" href="forstaff.png">
     <link rel="apple-touch-icon" href="forstaff.png">
-    <link rel="stylesheet" href="styles.css?v=1.14">
-    <script src="app.js?v=1.14" defer></script>
+    <link rel="stylesheet" href="styles.css?v=1.15">
+    <script src="app.js?v=1.15" defer></script>
   </head>
   <body>
     <main class="page-shell">
@@ -25,7 +25,7 @@
         <div class="header-actions no-print">
           <button class="ghost-button manual-trigger" type="button" id="openManual">使い方</button>
           <button type="button" id="printPage">印刷</button>
-          <p class="revision">v1.14</p>
+          <p class="revision">v1.15</p>
         </div>
       </header>
 
@@ -53,6 +53,7 @@
                 <span class="field-label">試算方針</span>
                 <select id="strategyPreset">
                   <option value="balanced">バランス型：個人手取りと法人留保を両方見る</option>
+                  <option value="retainedTarget">内部留保から逆算：法人に残したい額を先に決める</option>
                   <option value="ownerTotal">総手残り最大：個人手取り＋持分相当の法人留保</option>
                   <option value="personalCash">個人キャッシュ最大：給与・配当で個人資金を厚くする</option>
                   <option value="companyReserve">法人資金温存：配当なしで会社に資金を残す</option>
@@ -192,6 +193,7 @@
                 <select id="objective">
                   <option value="ownerTotal">オーナー総手残り最大</option>
                   <option value="personalCash">個人キャッシュ最大</option>
+                  <option value="retainedTarget">法人留保目標に近い案</option>
                 </select>
               </label>
 
@@ -209,6 +211,13 @@
                 <span class="field-label">指定配当率</span>
                 <input id="fixedPayout" type="text" inputmode="decimal" value="50">
                 <input class="range" type="range" min="0" max="100" step="1" data-for="fixedPayout">
+              </label>
+
+              <label class="field" for="targetRetained">
+                <span class="field-label">目標法人留保</span>
+                <input id="targetRetained" type="text" inputmode="numeric" value="5,000,000">
+                <input class="range" type="range" min="0" max="30000000" step="100000" data-for="targetRetained">
+                <p class="field-note">内部留保から逆算する場合は、この金額に近い候補を上位にします。</p>
               </label>
 
               <label class="field" for="minRetained">
@@ -491,6 +500,7 @@
               <span><i class="legend-dot metric"></i>評価指標</span>
               <span><i class="legend-dot cash"></i>個人手取り</span>
               <span><i class="legend-dot retained"></i>法人留保</span>
+              <span><i class="legend-dot target"></i>目標留保</span>
             </div>
           </div>
           <canvas id="chart" width="980" height="420"></canvas>
@@ -576,7 +586,7 @@
         <a href="https://www.matsumoto-kaikei.or.jp/" target="_blank" rel="noopener license">税理士法人松本会計事務所</a> ｜
         <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="license noopener">CC BY-NC-SA 4.0</a> ｜
         <a href="/tool-portal/terms.html" target="_blank" rel="noopener">利用条件</a> ｜
-        <span>v1.14</span>
+        <span>v1.15</span>
       </footer>
     </main>
   </body>
