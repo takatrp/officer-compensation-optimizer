@@ -7,8 +7,8 @@
     <link rel="icon" type="image/png" href="forstaff.png">
     <link rel="shortcut icon" type="image/png" href="forstaff.png">
     <link rel="apple-touch-icon" href="forstaff.png">
-    <link rel="stylesheet" href="styles.css?v=1.15">
-    <script src="app.js?v=1.15" defer></script>
+    <link rel="stylesheet" href="styles.css?v=1.16">
+    <script src="app.js?v=1.16" defer></script>
   </head>
   <body>
     <main class="page-shell">
@@ -25,7 +25,7 @@
         <div class="header-actions no-print">
           <button class="ghost-button manual-trigger" type="button" id="openManual">使い方</button>
           <button type="button" id="printPage">印刷</button>
-          <p class="revision">v1.15</p>
+          <p class="revision">v1.16</p>
         </div>
       </header>
 
@@ -45,7 +45,7 @@
               <span class="section-index">01</span>
               <div>
                 <h3>方針と年分</h3>
-                <p class="section-help">まず試算の目的と税制年度、役員構成を決めます。</p>
+                <p class="section-help">まず試算の目的を選び、内部留保から逆算する場合は目標額を入力します。</p>
               </div>
             </div>
             <div class="field-grid">
@@ -60,6 +60,12 @@
                   <option value="dividendUse">配当活用：役員報酬と配当を組み合わせる</option>
                   <option value="custom">カスタム：手動調整中</option>
                 </select>
+              </label>
+
+              <label class="field field-full target-retained-field" for="targetRetained" hidden>
+                <span class="field-label">最初に決める目標法人留保</span>
+                <input id="targetRetained" type="text" inputmode="numeric" value="5,000,000">
+                <p class="field-note">この金額を先に入力し、目標に最も近い役員報酬・配当の組み合わせを探索します。</p>
               </label>
 
               <label class="field" for="taxYear">
@@ -95,52 +101,44 @@
               <label class="field field-full" for="preProfit">
                 <span class="field-label">役員報酬・会社負担社保控除前利益</span>
                 <input id="preProfit" type="text" inputmode="numeric" value="20,000,000">
-                <input class="range" type="range" min="0" max="50000000" step="100000" data-for="preProfit">
               </label>
 
               <div class="field-subhead field-full single-only">単独役員の報酬</div>
               <label class="field single-only" for="currentMonthly">
                 <span class="field-label">比較する月額役員報酬</span>
                 <input id="currentMonthly" type="text" inputmode="numeric" value="800,000">
-                <input class="range" type="range" min="0" max="5000000" step="10000" data-for="currentMonthly">
               </label>
 
               <label class="field single-only" for="maxMonthly">
                 <span class="field-label">探索する月額上限</span>
                 <input id="maxMonthly" type="text" inputmode="numeric" value="2,000,000">
-                <input class="range" type="range" min="100000" max="5000000" step="10000" data-for="maxMonthly">
               </label>
 
               <div class="field-subhead field-full couple-only" hidden>夫婦役員の報酬</div>
               <label class="field couple-only couple-split-only" for="coupleTotalMonthly" hidden>
                 <span class="field-label">夫婦合計月額報酬（固定）</span>
                 <input id="coupleTotalMonthly" type="text" inputmode="numeric" value="1,200,000">
-                <input class="range" type="range" min="0" max="5000000" step="10000" data-for="coupleTotalMonthly">
               </label>
 
               <label class="field couple-only" for="couplePrimaryMonthly" hidden>
                 <span class="field-label">比較する役員A月額</span>
                 <input id="couplePrimaryMonthly" type="text" inputmode="numeric" value="800,000">
-                <input class="range" type="range" min="0" max="1200000" step="10000" data-for="couplePrimaryMonthly">
                 <p class="field-note couple-split-only">役員Bは、夫婦合計月額報酬との差額として計算します。</p>
               </label>
 
               <label class="field couple-only couple-grid-only" for="coupleSpouseMonthly" hidden>
                 <span class="field-label">比較する役員B月額</span>
                 <input id="coupleSpouseMonthly" type="text" inputmode="numeric" value="400,000">
-                <input class="range" type="range" min="0" max="1200000" step="10000" data-for="coupleSpouseMonthly">
               </label>
 
               <label class="field couple-only couple-grid-only" for="couplePrimaryMaxMonthly" hidden>
                 <span class="field-label">役員Aの探索上限</span>
                 <input id="couplePrimaryMaxMonthly" type="text" inputmode="numeric" value="1,200,000">
-                <input class="range" type="range" min="0" max="5000000" step="10000" data-for="couplePrimaryMaxMonthly">
               </label>
 
               <label class="field couple-only couple-grid-only" for="coupleSpouseMaxMonthly" hidden>
                 <span class="field-label">役員Bの探索上限</span>
                 <input id="coupleSpouseMaxMonthly" type="text" inputmode="numeric" value="1,200,000">
-                <input class="range" type="range" min="0" max="5000000" step="10000" data-for="coupleSpouseMaxMonthly">
                 <p class="field-note">A/Bの組み合わせを総当たりします。候補数が増えるため、まず5万〜10万円刻みで確認してください。</p>
               </label>
 
@@ -148,7 +146,6 @@
               <label class="field field-full" for="step">
                 <span class="field-label" id="stepLabel">探索刻み</span>
                 <input id="step" type="text" inputmode="numeric" value="50,000">
-                <input class="range" type="range" min="1000" max="100000" step="1000" data-for="step">
                 <p class="field-note" id="stepNote" hidden></p>
               </label>
 
@@ -156,25 +153,21 @@
               <label class="field" for="shareRate">
                 <span class="field-label">本人/役員Aの持株割合</span>
                 <input id="shareRate" type="text" inputmode="decimal" value="100">
-                <input class="range" type="range" min="0" max="100" step="1" data-for="shareRate">
               </label>
 
               <label class="field" for="otherIncome">
                 <span class="field-label">本人/役員Aの他の所得金額</span>
                 <input id="otherIncome" type="text" inputmode="numeric" value="0">
-                <input class="range" type="range" min="0" max="30000000" step="100000" data-for="otherIncome">
               </label>
 
               <label class="field couple-only" for="spouseShareRate" hidden>
                 <span class="field-label">役員Bの持株割合</span>
                 <input id="spouseShareRate" type="text" inputmode="decimal" value="0">
-                <input class="range" type="range" min="0" max="100" step="1" data-for="spouseShareRate">
               </label>
 
               <label class="field couple-only" for="spouseOtherIncome" hidden>
                 <span class="field-label">役員Bの他の所得金額</span>
                 <input id="spouseOtherIncome" type="text" inputmode="numeric" value="0">
-                <input class="range" type="range" min="0" max="30000000" step="100000" data-for="spouseOtherIncome">
               </label>
             </div>
           </div>
@@ -210,20 +203,11 @@
               <label class="field" for="fixedPayout">
                 <span class="field-label">指定配当率</span>
                 <input id="fixedPayout" type="text" inputmode="decimal" value="50">
-                <input class="range" type="range" min="0" max="100" step="1" data-for="fixedPayout">
-              </label>
-
-              <label class="field" for="targetRetained">
-                <span class="field-label">目標法人留保</span>
-                <input id="targetRetained" type="text" inputmode="numeric" value="5,000,000">
-                <input class="range" type="range" min="0" max="30000000" step="100000" data-for="targetRetained">
-                <p class="field-note">内部留保から逆算する場合は、この金額に近い候補を上位にします。</p>
               </label>
 
               <label class="field" for="minRetained">
                 <span class="field-label">税後法人留保の下限</span>
                 <input id="minRetained" type="text" inputmode="numeric" value="0">
-                <input class="range" type="range" min="0" max="30000000" step="100000" data-for="minRetained">
               </label>
             </div>
 
@@ -257,43 +241,36 @@
                 <label class="field" for="surtaxRate">
                   <span class="field-label">復興特別所得税率</span>
                   <input id="surtaxRate" type="text" inputmode="decimal" value="2.1">
-                  <input class="range" type="range" min="0" max="5" step="0.1" data-for="surtaxRate">
                 </label>
 
                 <label class="field" for="residentRate">
                   <span class="field-label">住民税所得割率</span>
                   <input id="residentRate" type="text" inputmode="decimal" value="10.0">
-                  <input class="range" type="range" min="0" max="20" step="0.1" data-for="residentRate">
                 </label>
 
                 <label class="field" for="residentPerCapita">
                   <span class="field-label">住民税均等割等</span>
                   <input id="residentPerCapita" type="text" inputmode="numeric" value="5,000">
-                  <input class="range" type="range" min="0" max="20000" step="500" data-for="residentPerCapita">
                 </label>
 
                 <label class="field" for="otherDedN">
                   <span class="field-label">その他所得控除 所得税</span>
                   <input id="otherDedN" type="text" inputmode="numeric" value="0">
-                  <input class="range" type="range" min="0" max="10000000" step="100000" data-for="otherDedN">
                 </label>
 
                 <label class="field" for="otherDedR">
                   <span class="field-label">その他所得控除 住民税</span>
                   <input id="otherDedR" type="text" inputmode="numeric" value="0">
-                  <input class="range" type="range" min="0" max="10000000" step="100000" data-for="otherDedR">
                 </label>
 
                 <label class="field couple-only" for="spouseOtherDedN" hidden>
                   <span class="field-label">役員B その他所得控除 所得税</span>
                   <input id="spouseOtherDedN" type="text" inputmode="numeric" value="0">
-                  <input class="range" type="range" min="0" max="10000000" step="100000" data-for="spouseOtherDedN">
                 </label>
 
                 <label class="field couple-only" for="spouseOtherDedR" hidden>
                   <span class="field-label">役員B その他所得控除 住民税</span>
                   <input id="spouseOtherDedR" type="text" inputmode="numeric" value="0">
-                  <input class="range" type="range" min="0" max="10000000" step="100000" data-for="spouseOtherDedR">
                 </label>
               </div>
             </div>
@@ -365,31 +342,26 @@
                 <label class="field" for="healthRate">
                   <span class="field-label">健康保険料率</span>
                   <input id="healthRate" type="text" inputmode="decimal" value="10.12">
-                  <input class="range" type="range" min="0" max="15" step="0.01" data-for="healthRate">
                 </label>
 
                 <label class="field" for="careRate">
                   <span class="field-label">介護保険料率</span>
                   <input id="careRate" type="text" inputmode="decimal" value="1.62">
-                  <input class="range" type="range" min="0" max="4" step="0.01" data-for="careRate">
                 </label>
 
                 <label class="field" for="supportRate">
                   <span class="field-label">子ども・子育て支援金率</span>
                   <input id="supportRate" type="text" inputmode="decimal" value="0.23">
-                  <input class="range" type="range" min="0" max="2" step="0.01" data-for="supportRate">
                 </label>
 
                 <label class="field" for="pensionRate">
                   <span class="field-label">厚生年金保険料率</span>
                   <input id="pensionRate" type="text" inputmode="decimal" value="18.30">
-                  <input class="range" type="range" min="0" max="25" step="0.01" data-for="pensionRate">
                 </label>
 
                 <label class="field" for="childContributionRate">
                   <span class="field-label">子ども・子育て拠出金率</span>
                   <input id="childContributionRate" type="text" inputmode="decimal" value="0.36">
-                  <input class="range" type="range" min="0" max="2" step="0.01" data-for="childContributionRate">
                 </label>
               </div>
 
@@ -425,49 +397,41 @@
                 <label class="field" for="corpLowRate">
                   <span class="field-label">年800万円以下部分の実効税率</span>
                   <input id="corpLowRate" type="text" inputmode="decimal" value="25.0">
-                  <input class="range" type="range" min="0" max="50" step="0.1" data-for="corpLowRate">
                 </label>
 
                 <label class="field" for="corpHighRate">
                   <span class="field-label">年800万円超部分の実効税率</span>
                   <input id="corpHighRate" type="text" inputmode="decimal" value="34.0">
-                  <input class="range" type="range" min="0" max="60" step="0.1" data-for="corpHighRate">
                 </label>
 
                 <label class="field" for="corpThreshold">
                   <span class="field-label">軽減税率の区分額</span>
                   <input id="corpThreshold" type="text" inputmode="numeric" value="8,000,000">
-                  <input class="range" type="range" min="0" max="20000000" step="100000" data-for="corpThreshold">
                 </label>
 
                 <label class="field" for="corpFixedTax">
                   <span class="field-label">均等割等の固定税額</span>
                   <input id="corpFixedTax" type="text" inputmode="numeric" value="70,000">
-                  <input class="range" type="range" min="0" max="300000" step="10000" data-for="corpFixedTax">
                 </label>
 
                 <label class="field" for="divCreditNLow">
                   <span class="field-label">配当控除 所得税 (課税所得1,000万円以下部分)</span>
                   <input id="divCreditNLow" type="text" inputmode="decimal" value="10.0">
-                  <input class="range" type="range" min="0" max="15" step="0.1" data-for="divCreditNLow">
                 </label>
 
                 <label class="field" for="divCreditNHigh">
                   <span class="field-label">配当控除 所得税 (課税所得1,000万円超部分)</span>
                   <input id="divCreditNHigh" type="text" inputmode="decimal" value="5.0">
-                  <input class="range" type="range" min="0" max="10" step="0.1" data-for="divCreditNHigh">
                 </label>
 
                 <label class="field" for="divCreditRLow">
                   <span class="field-label">配当控除 住民税 (課税所得1,000万円以下部分)</span>
                   <input id="divCreditRLow" type="text" inputmode="decimal" value="2.8">
-                  <input class="range" type="range" min="0" max="8" step="0.1" data-for="divCreditRLow">
                 </label>
 
                 <label class="field" for="divCreditRHigh">
                   <span class="field-label">配当控除 住民税 (課税所得1,000万円超部分)</span>
                   <input id="divCreditRHigh" type="text" inputmode="decimal" value="1.4">
-                  <input class="range" type="range" min="0" max="5" step="0.1" data-for="divCreditRHigh">
                 </label>
               </div>
             </div>
@@ -551,7 +515,7 @@
             <ol class="manual-steps">
               <li>
                 <strong>試算方針と所得税の年分を選びます。</strong>
-                <span>バランス型、総手残り最大、個人キャッシュ最大などの方針を選ぶと、評価基準や配当方針が自動で入ります。</span>
+                <span>内部留保から逆算する場合は、方針の直下に表示される目標法人留保を最初に入力します。その他の方針では、評価基準や配当方針が自動で入ります。</span>
               </li>
               <li>
                 <strong>利益額、現在報酬、探索上限、持株割合を入力します。</strong>
@@ -586,7 +550,7 @@
         <a href="https://www.matsumoto-kaikei.or.jp/" target="_blank" rel="noopener license">税理士法人松本会計事務所</a> ｜
         <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="license noopener">CC BY-NC-SA 4.0</a> ｜
         <a href="/tool-portal/terms.html" target="_blank" rel="noopener">利用条件</a> ｜
-        <span>v1.15</span>
+        <span>v1.16</span>
       </footer>
     </main>
   </body>

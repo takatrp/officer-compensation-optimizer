@@ -322,13 +322,6 @@ select{
   cursor:pointer;
 }
 
-.range{
-  min-height:auto;
-  padding:0;
-  accent-color:var(--brand);
-  cursor:pointer;
-}
-
 .toggle-grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));

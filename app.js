@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.15";
+  const VERSION = "1.16";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -1440,7 +1440,6 @@
     const healthInput = document.getElementById("healthRate");
     if(!rate || !healthInput) return;
     healthInput.value = formatInput("healthRate", rate.healthRate);
-    syncRangeFromInput("healthRate");
   }
 
   function markPrefectureCustom(){
@@ -1452,7 +1451,6 @@
 
   function applyDefaults(){
     Object.entries(defaults).forEach(([id, value]) => setControlValue(id, value));
-    syncAllRangesFromInputs();
   }
 
   function applyStrategyPreset(value){
@@ -1460,7 +1458,6 @@
     if(!preset) return;
     Object.entries(preset).forEach(([id, presetValue]) => setControlValue(id, presetValue));
     formatAllInputs();
-    syncAllRangesFromInputs();
     updateDependentControls();
   }
 
@@ -1469,20 +1466,6 @@
     if(strategySelect && strategySelect.value !== "custom"){
       strategySelect.value = "custom";
     }
-  }
-
-  function syncAllRangesFromInputs(){
-    document.querySelectorAll(".range[data-for]").forEach((range) => {
-      syncRangeFromInput(range.dataset.for);
-    });
-  }
-
-  function syncRangeFromInput(id){
-    const target = document.getElementById(id);
-    const range = document.querySelector(`.range[data-for="${id}"]`);
-    if(!target || !range) return;
-    const value = parseNumber(target.value);
-    range.value = String(clamp(value, Number(range.min), Number(range.max)));
   }
 
   function formatAllInputs(){
@@ -1515,8 +1498,6 @@
     const spouseInput = document.getElementById("coupleSpouseMonthly");
     const primaryMaxInput = document.getElementById("couplePrimaryMaxMonthly");
     const spouseMaxInput = document.getElementById("coupleSpouseMaxMonthly");
-    const primaryRange = document.querySelector('.range[data-for="couplePrimaryMonthly"]');
-    const spouseRange = document.querySelector('.range[data-for="coupleSpouseMonthly"]');
     const stepLabel = document.getElementById("stepLabel");
     const stepNote = document.getElementById("stepNote");
     if(stepLabel){
@@ -1532,34 +1513,31 @@
         : "";
       stepNote.hidden = !gridMode;
     }
-    if(totalInput && primaryInput && primaryRange){
+    if(totalInput && primaryInput){
       const total = Math.max(0, parseNumber(totalInput.value));
       const primaryLimit = splitMode
         ? total
         : Math.max(1000, parseNumber(primaryMaxInput?.value || 0));
-      primaryRange.max = String(Math.max(1000, primaryLimit));
       if(parseNumber(primaryInput.value) > primaryLimit){
         primaryInput.value = formatInput("couplePrimaryMonthly", primaryLimit);
       }
-      syncRangeFromInput("couplePrimaryMonthly");
     }
-    if(spouseInput && spouseRange && spouseMaxInput){
+    if(spouseInput && spouseMaxInput){
       const spouseLimit = Math.max(1000, parseNumber(spouseMaxInput.value));
-      spouseRange.max = String(spouseLimit);
       if(parseNumber(spouseInput.value) > spouseLimit){
         spouseInput.value = formatInput("coupleSpouseMonthly", spouseLimit);
       }
-      syncRangeFromInput("coupleSpouseMonthly");
     }
   }
 
   function updateDependentControls(){
     const policy = document.getElementById("divPolicy")?.value;
+    const objective = document.getElementById("objective")?.value;
     const fixedInput = document.getElementById("fixedPayout");
-    const fixedRange = document.querySelector('.range[data-for="fixedPayout"]');
+    const targetField = document.querySelector(".target-retained-field");
     const disabled = policy !== "fixed";
     if(fixedInput) fixedInput.disabled = disabled;
-    if(fixedRange) fixedRange.disabled = disabled;
+    if(targetField) targetField.hidden = objective !== "retainedTarget";
     updateRoleModeControls();
   }
 
@@ -1606,26 +1584,12 @@
       if(moneyIds.has(id) || percentIds.has(id)){
         el.addEventListener("input", () => {
           if(moneyIds.has(id)) formatMoneyLive(el);
-          syncRangeFromInput(id);
         });
         el.addEventListener("blur", () => {
           el.value = formatInput(id, parseNumber(el.value));
-          syncAllRangesFromInputs();
           queueUpdate();
         });
       }
-    });
-
-    document.querySelectorAll(".range[data-for]").forEach((range) => {
-      range.addEventListener("input", () => {
-        const target = document.getElementById(range.dataset.for);
-        if(!target) return;
-        target.value = formatInput(range.dataset.for, Number(range.value));
-        if(presetControlledIds.includes(range.dataset.for)) markStrategyCustom();
-        if(range.dataset.for === "healthRate") markPrefectureCustom();
-        if(["coupleTotalMonthly","couplePrimaryMonthly","coupleSpouseMonthly","couplePrimaryMaxMonthly","coupleSpouseMaxMonthly"].includes(range.dataset.for)) updateRoleModeControls();
-        queueUpdate();
-      });
     });
 
     const prefectureSelect = document.getElementById("prefecture");
@@ -1700,12 +1664,12 @@
   }
 
   function boot(){
-    syncAllRangesFromInputs();
     formatAllInputs();
     bindControls();
     bindManualDialog();
     updateDependentControls();
     document.getElementById("divPolicy").addEventListener("change", updateDependentControls);
+    document.getElementById("objective").addEventListener("change", updateDependentControls);
     update();
   }
 
