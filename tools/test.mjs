@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const app = require("../app.js");
 
-assert.equal(app.VERSION, "1.17");
+assert.equal(app.VERSION, "1.18");
 assert.equal(app.parseNumber("20,000,000"), 20000000);
 assert.equal(app.formatMoneyText("3000000"), "3,000,000");
 assert.equal(app.formatMoneyText("3,000,000"), "3,000,000");
@@ -18,11 +18,12 @@ assert.equal(app.getPrefectureRate("兵庫").healthRate, 10.12);
 assert.equal(app.getPrefectureRate("佐賀").healthRate, 10.55);
 assert.equal(app.getPrefectureRate("存在しない支部"), null);
 assert.equal(Object.keys(app.strategyPresets).length, 6);
-assert.equal(app.strategyPresets.balanced.divPolicy, "fixed");
+assert.equal(app.strategyPresets.balanced.includeDividend, false);
 assert.equal(app.strategyPresets.retainedTarget.objective, "retainedTarget");
-assert.equal(app.strategyPresets.companyReserve.divPolicy, "none");
+assert.equal(app.strategyPresets.retainedTarget.includeDividend, false);
+assert.equal(app.strategyPresets.dividendUse.includeDividend, true);
 assert.equal(app.strategyPresets.personalCash.objective, "personalCash");
-assert.deepEqual(app.presetControlledIds, ["objective","divPolicy","fixedPayout","targetRetained","minRetained","noLoss","applyDividendCredit"]);
+assert.deepEqual(app.presetControlledIds, ["objective","includeDividend","divPolicy","fixedPayout","targetRetained","minRetained","noLoss","applyDividendCredit"]);
 assert.equal(app.salaryDeduction(1900000, "r7"), 650000);
 assert.equal(app.salaryDeduction(1900000, "r8r9"), 740000);
 assert.equal(app.salaryDeduction(2200000, "r8r9"), 740000);
@@ -42,6 +43,8 @@ const calculator = app.createCalculator();
 const params = app.defaultParams();
 assert.equal(params.roleMode, "single");
 assert.equal(params.step, 50000);
+assert.equal(params.includeDividend, false);
+assert.equal(params.divPolicy, "none");
 const sample = calculator.simulate(800000, 0, params);
 
 assert.equal(sample.feasible, true);
@@ -51,13 +54,20 @@ assert.ok(sample.employerSI > 0);
 assert.ok(sample.personalTakeHome > 0);
 
 const rows = calculator.runSearch("optimize", params);
-assert.ok(rows.length > 100);
+assert.ok(rows.length > 10);
 assert.ok(rows[0].feasible);
 assert.ok(rows[0].metric >= rows[1].metric);
 assert.equal(rows[0].monthly % params.step, 0);
+assert.ok(rows.every((row) => row.payoutRate === 0));
+
+const dividendParams = {...params, includeDividend:true, divPolicy:"optimize"};
+const dividendRows = calculator.runSearch("optimize", dividendParams);
+assert.ok(dividendRows.length > rows.length);
+assert.ok(dividendRows.some((row) => row.payoutRate > 0));
 
 const retainedTargetParams = {
   ...params,
+  includeDividend:true,
   objective:"retainedTarget",
   divPolicy:"optimize",
   targetRetained:5000000,

@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.17";
+  const VERSION = "1.18";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -103,7 +103,7 @@
     "roleMode","preProfit","currentMonthly","maxMonthly","step","shareRate","otherIncome",
     "coupleTotalMonthly","couplePrimaryMonthly","coupleSpouseMonthly",
     "couplePrimaryMaxMonthly","coupleSpouseMaxMonthly","spouseShareRate","spouseOtherIncome",
-    "objective","divPolicy","fixedPayout","targetRetained","minRetained","noLoss","applyDividendCredit",
+    "objective","includeDividend","divPolicy","fixedPayout","targetRetained","minRetained","noLoss","applyDividendCredit",
     "taxYear","surtaxRate","residentRate","residentPerCapita","otherDedN","otherDedR",
     "spouseOtherDedN","spouseOtherDedR",
     "healthRate","careRate","supportRate","pensionRate","childContributionRate",
@@ -115,8 +115,9 @@
   const strategyPresets = Object.freeze({
     balanced: Object.freeze({
       objective:"ownerTotal",
-      divPolicy:"fixed",
-      fixedPayout:"30",
+      includeDividend:false,
+      divPolicy:"optimize",
+      fixedPayout:"0",
       targetRetained:"5,000,000",
       minRetained:"3,000,000",
       noLoss:true,
@@ -124,6 +125,7 @@
     }),
     retainedTarget: Object.freeze({
       objective:"retainedTarget",
+      includeDividend:false,
       divPolicy:"optimize",
       fixedPayout:"0",
       targetRetained:"5,000,000",
@@ -133,6 +135,7 @@
     }),
     ownerTotal: Object.freeze({
       objective:"ownerTotal",
+      includeDividend:false,
       divPolicy:"optimize",
       fixedPayout:"0",
       targetRetained:"5,000,000",
@@ -142,8 +145,9 @@
     }),
     personalCash: Object.freeze({
       objective:"personalCash",
+      includeDividend:false,
       divPolicy:"optimize",
-      fixedPayout:"100",
+      fixedPayout:"0",
       targetRetained:"0",
       minRetained:"0",
       noLoss:true,
@@ -151,7 +155,8 @@
     }),
     companyReserve: Object.freeze({
       objective:"ownerTotal",
-      divPolicy:"none",
+      includeDividend:false,
+      divPolicy:"optimize",
       fixedPayout:"0",
       targetRetained:"5,000,000",
       minRetained:"5,000,000",
@@ -160,6 +165,7 @@
     }),
     dividendUse: Object.freeze({
       objective:"personalCash",
+      includeDividend:true,
       divPolicy:"fixed",
       fixedPayout:"50",
       targetRetained:"3,000,000",
@@ -170,7 +176,7 @@
   });
 
   const presetControlledIds = Object.freeze([
-    "objective","divPolicy","fixedPayout","targetRetained","minRetained","noLoss","applyDividendCredit"
+    "objective","includeDividend","divPolicy","fixedPayout","targetRetained","minRetained","noLoss","applyDividendCredit"
   ]);
 
   const defaults = Object.freeze({
@@ -190,8 +196,9 @@
     spouseOtherIncome:"0",
     strategyPreset:"balanced",
     objective:"ownerTotal",
-    divPolicy:"fixed",
-    fixedPayout:"30",
+    includeDividend:false,
+    divPolicy:"optimize",
+    fixedPayout:"0",
     targetRetained:"5,000,000",
     minRetained:"3,000,000",
     noLoss:true,
@@ -437,6 +444,7 @@
       spouseShare:parseNumber(defaults.spouseShareRate) / 100,
       spouseOtherIncome:parseNumber(defaults.spouseOtherIncome),
       objective:defaults.objective,
+      includeDividend:defaults.includeDividend,
       divPolicy:defaults.divPolicy,
       fixedPayout:parseNumber(defaults.fixedPayout) / 100,
       targetRetained:parseNumber(defaults.targetRetained),
@@ -481,6 +489,8 @@
     const couplePrimaryMonthly = roleMode === "coupleSplit"
       ? clamp(p.couplePrimaryMonthly || 0, 0, coupleTotalMonthly)
       : clamp(p.couplePrimaryMonthly || 0, 0, couplePrimaryMaxMonthly);
+    const includeDividend = p.includeDividend === true;
+    const requestedDivPolicy = ["none","all","fixed","optimize"].includes(p.divPolicy) ? p.divPolicy : "optimize";
     return {
       ...p,
       roleMode,
@@ -496,6 +506,8 @@
       coupleSpouseMaxMonthly,
       spouseShare,
       spouseOtherIncome:Math.max(0, p.spouseOtherIncome || 0),
+      includeDividend,
+      divPolicy:includeDividend ? requestedDivPolicy : "none",
       fixedPayout:clamp(p.fixedPayout, 0, 1),
       targetRetained:Math.max(0, p.targetRetained || 0),
       minRetained:Math.max(0, p.minRetained),
@@ -795,6 +807,7 @@
     }
 
     function payoutRatesFor(policy, p){
+      if(!p.includeDividend) return [0];
       if(policy === "none") return [0];
       if(policy === "all") return [1];
       if(policy === "fixed") return [clamp(p.fixedPayout, 0, 1)];
@@ -893,6 +906,7 @@
       spouseShare:n("spouseShareRate") / 100,
       spouseOtherIncome:n("spouseOtherIncome"),
       objective:v("objective"),
+      includeDividend:checked("includeDividend"),
       divPolicy:v("divPolicy"),
       fixedPayout:n("fixedPayout") / 100,
       targetRetained:n("targetRetained"),
@@ -1129,9 +1143,10 @@
         ? `比較案比：目標差額 ${man(current.retainedGap)} → ${man(best.retainedGap)}（改善 ${signedMan(current.retainedGap - best.retainedGap)}）、${personalName} ${signedMan(best.personalTakeHome - current.personalTakeHome)}`
         : `比較案比：評価指標 ${signedMan(best.metric - current.metric)}、${personalName} ${signedMan(best.personalTakeHome - current.personalTakeHome)}、法人留保 ${signedMan(best.retained - current.retained)}`
       : "比較月額は現在の条件では候補外です。";
+    const personalEquation = (person) => `給与 ${man(person.annualSalary)}${p.includeDividend ? ` ＋ 配当 ${man(person.ownerDividend)}` : ""} − 個人税 ${man(person.personalTax)} − 本人社保 ${man(person.employeeSI)} ＝ ${man(person.personalTakeHome)}`;
     const personalDetail = isCoupleRow(best)
-      ? best.people.map((person) => `${person.label}: 給与 ${man(person.annualSalary)} ＋ 配当 ${man(person.ownerDividend)} − 個人税 ${man(person.personalTax)} − 本人社保 ${man(person.employeeSI)} ＝ ${man(person.personalTakeHome)}`).join("<br>")
-      : `給与 ${man(best.annualSalary)} ＋ 本人配当 ${man(best.ownerDividend)} − 個人税 ${man(best.personalTax)} − 本人社保 ${man(best.employeeSI)} ＝ ${man(best.personalTakeHome)}`;
+      ? best.people.map((person) => `${person.label}: ${personalEquation(person)}`).join("<br>")
+      : personalEquation(best);
     const objectiveVisual = retainedTargetMode
       ? renderTargetReasonVisual(best, current, p)
       : p.objective === "ownerTotal"
@@ -1140,15 +1155,18 @@
             {label:retainedName, value:best.ownerRetainedValue, color:reasonColors.retained}
           ])
         : "";
-    const companyVisual = renderReasonBreakdownChart("会社利益の行き先", `前利益 ${man(p.preProfit)}`, [
+    const companyParts = [
       {label:"役員報酬", value:best.annualSalary, color:reasonColors.salary},
       {label:"会社社保", value:best.employerSI, color:reasonColors.social},
       {label:"法人税等", value:best.corpTax, color:reasonColors.tax},
-      {label:"配当", value:best.totalDividend, color:reasonColors.dividend},
       {label:"法人留保", value:best.retained, color:reasonColors.retained}
-    ]);
-    const personalInflow = best.annualSalary + best.ownerDividend;
-    const personalVisual = renderReasonBreakdownChart(`${personalName}の行き先`, `給与・配当 ${man(personalInflow)}`, [
+    ];
+    if(p.includeDividend){
+      companyParts.splice(3, 0, {label:"配当", value:best.totalDividend, color:reasonColors.dividend});
+    }
+    const companyVisual = renderReasonBreakdownChart("会社利益の行き先", `前利益 ${man(p.preProfit)}`, companyParts);
+    const personalInflow = best.annualSalary + (p.includeDividend ? best.ownerDividend : 0);
+    const personalVisual = renderReasonBreakdownChart(`${personalName}の行き先`, `${p.includeDividend ? "給与・配当" : "給与"} ${man(personalInflow)}`, [
       {label:personalName, value:best.personalTakeHome, color:reasonColors.takeHome},
       {label:"個人税", value:best.personalTax, color:reasonColors.tax},
       {label:"本人社保", value:best.employeeSI, color:reasonColors.social}
@@ -1177,7 +1195,7 @@
             <div>
               <dt>法人側</dt>
               <dd>前利益 ${man(p.preProfit)} − 年間役員報酬 ${man(best.annualSalary)} − 会社社保 ${man(best.employerSI)} − 法人税等 ${man(best.corpTax)} ＝ 税引後利益 ${man(best.companyAfterTax)}<br>
-              税引後利益 ${man(best.companyAfterTax)} − 配当総額 ${man(best.totalDividend)} ＝ 法人留保 ${man(best.retained)}</dd>
+              ${p.includeDividend ? `税引後利益 ${man(best.companyAfterTax)} − 配当総額 ${man(best.totalDividend)} ＝ 法人留保 ${man(best.retained)}` : `税引後利益 ${man(best.companyAfterTax)} ＝ 法人留保 ${man(best.retained)}`}</dd>
             </div>
             <div>
               <dt>比較</dt>
@@ -1232,7 +1250,7 @@
       messageClass = "warn";
       message = `${coupleMode ? "世帯" : "個人"}キャッシュ最大では法人留保より${personalName}を優先するため、配当が多く出やすくなります。運転資金と金融機関評価を別途確認してください。`;
     }
-    const shareNote = best.householdShare < 0.999
+    const shareNote = p.includeDividend && best.totalDividend > 0 && best.householdShare < 0.999
       ? `<div class="message">${coupleMode ? "夫婦持分" : "持株割合"} ${(best.householdShare * 100).toLocaleString("ja-JP", {maximumFractionDigits:1})}% のため、配当総額 ${man(best.totalDividend)} のうち${ownerDividendLabel(best)}は ${man(best.ownerDividend)} です。残りは他の株主に配当されます。</div>`
       : "";
     const shareOverNote = coupleMode && p.share + p.spouseShare > 1.000001
@@ -1243,9 +1261,10 @@
       ? `<span>A ${yen(best.primaryMonthly)}</span><span>B ${yen(best.spouseMonthly)}</span>`
       : yen(best.monthly);
     const resultAmountClass = coupleMode ? "amount split-amount" : "amount";
+    const payoutText = p.includeDividend ? `配当率 ${pct(best.payoutRate)}` : "役員報酬のみ";
     const resultSub = coupleMode
-      ? `合計月額 ${yen(best.totalMonthly)} ／ 年間合計 ${yen(best.annualSalary)} ／ 配当率 ${pct(best.payoutRate)} ／ 評価基準 ${objectiveText}`
-      : `年間 ${yen(best.annualSalary)} ／ 配当率 ${pct(best.payoutRate)} ／ 評価基準 ${objectiveText}`;
+      ? `合計月額 ${yen(best.totalMonthly)} ／ 年間合計 ${yen(best.annualSalary)} ／ ${payoutText} ／ 評価基準 ${objectiveText}`
+      : `年間 ${yen(best.annualSalary)} ／ ${payoutText} ／ 評価基準 ${objectiveText}`;
     const stdText = coupleMode
       ? `A 健保 ${man(best.people.find((person) => person.key === "primary")?.healthStd || 0)} / B 健保 ${man(best.people.find((person) => person.key === "spouse")?.healthStd || 0)}`
       : `厚年 ${man(best.pensionStd)}`;
@@ -1261,16 +1280,18 @@
       </div>
 
       <div class="metric-grid">
-        <div class="metric-card"><p class="k">${personalName}</p><p class="v">${man(best.personalTakeHome)}</p><p class="s">給与＋配当−個人税−本人社保</p></div>
-        <div class="metric-card"><p class="k">法人留保</p><p class="v">${man(best.retained)}</p><p class="s">法人税後利益−配当総額</p></div>
+        <div class="metric-card"><p class="k">${personalName}</p><p class="v">${man(best.personalTakeHome)}</p><p class="s">${p.includeDividend ? "給与＋配当" : "給与"}−個人税−本人社保</p></div>
+        <div class="metric-card"><p class="k">法人留保</p><p class="v">${man(best.retained)}</p><p class="s">${p.includeDividend ? "法人税後利益−配当総額" : "法人税後利益"}</p></div>
         <div class="metric-card"><p class="k">税・社保合計</p><p class="v">${man(best.corpTax + best.personalTax + best.employeeSI + best.employerSI)}</p><p class="s">法人税、個人税、本人・会社社保</p></div>
-        <div class="metric-card"><p class="k">配当総額</p><p class="v">${man(best.totalDividend)}</p><p class="s">${ownerDividendLabel(best)} ${man(best.ownerDividend)} ${householdShareNote(best)}</p></div>
+        ${p.includeDividend ? `<div class="metric-card"><p class="k">配当総額</p><p class="v">${man(best.totalDividend)}</p><p class="s">${ownerDividendLabel(best)} ${man(best.ownerDividend)} ${householdShareNote(best)}</p></div>` : ""}
         <div class="metric-card"><p class="k">法人税等</p><p class="v">${man(best.corpTax)}</p><p class="s">課税所得 ${man(best.companyTaxable)}</p></div>
         <div class="metric-card"><p class="k">標準報酬月額</p><p class="v">${man(best.healthStd)}</p><p class="s">${stdText}</p></div>
       </div>
 
       <div class="message ${messageClass}">${message}</div>
-      <div class="message">配当なし最適：${scenarioSummary(noDivBest, p)}。 全額配当最適：${scenarioSummary(allDivBest, p)}。</div>
+      ${p.includeDividend
+        ? `<div class="message">配当なし案：${scenarioSummary(noDivBest, p)}。 全額配当案：${scenarioSummary(allDivBest, p)}。</div>`
+        : '<div class="message">役員報酬のみで探索しています。</div>'}
       ${shareOverNote}
       ${shareNote}
     `;
@@ -1285,7 +1306,7 @@
     ];
   }
 
-  function renderBalanceRow(title, row){
+  function renderBalanceRow(title, row, p){
     if(!row){
       return `<div class="balance-row"><div class="message warn">${title}は現在の制約条件では候補外です。</div></div>`;
     }
@@ -1305,14 +1326,14 @@
 
     return `
       <div class="balance-row">
-        <div class="balance-head"><span>${title}</span><span>${monthlyLabel(row)} ／ 配当率 ${pct(row.payoutRate)}</span></div>
+        <div class="balance-head"><span>${title}</span><span>${monthlyLabel(row)} ／ ${p.includeDividend ? `配当率 ${pct(row.payoutRate)}` : "役員報酬のみ"}</span></div>
         <div class="balance-track">${segments}</div>
         <div class="balance-legend">${legend}</div>
       </div>
     `;
   }
 
-  function renderBalance(best, current){
+  function renderBalance(best, current, p){
     const box = document.getElementById("balanceBox");
     box.innerHTML = `
       <div class="panel-head">
@@ -1321,8 +1342,8 @@
           <h2>利益の配分イメージ</h2>
         </div>
       </div>
-      ${renderBalanceRow("おすすめ案", best)}
-      ${renderBalanceRow("比較月額", current)}
+      ${renderBalanceRow("おすすめ案", best, p)}
+      ${renderBalanceRow("比較月額", current, p)}
     `;
   }
 
@@ -1350,7 +1371,7 @@
     `).join("");
   }
 
-  function renderTable(rows){
+  function renderTable(rows, p){
     latestRows = rows;
     const box = document.getElementById("tableBox");
     if(!rows.length){
@@ -1367,7 +1388,7 @@
           <tr>
             <th>順位</th>
             <th>${coupleMode ? "配分" : "月額"}</th>
-            <th>配当率</th>
+            ${p.includeDividend ? "<th>配当率</th>" : ""}
             <th>${coupleMode ? "世帯手取り" : "個人手取り"}</th>
             <th>法人留保</th>
             ${retainedTargetMode ? "<th>目標差額</th>" : ""}
@@ -1380,7 +1401,7 @@
             <tr>
               <td>${index + 1}</td>
               <td>${monthlyBucketLabel(row)}</td>
-              <td>${pct(row.payoutRate)}</td>
+              ${p.includeDividend ? `<td>${pct(row.payoutRate)}</td>` : ""}
               <td>${man(row.personalTakeHome)}</td>
               <td>${man(row.retained)}</td>
               ${retainedTargetMode ? `<td>${man(row.retainedGap)}</td>` : ""}
@@ -1662,12 +1683,16 @@
   }
 
   function updateDependentControls(){
+    const includeDividend = document.getElementById("includeDividend")?.checked === true;
     const policy = document.getElementById("divPolicy")?.value;
     const objective = document.getElementById("objective")?.value;
     const fixedInput = document.getElementById("fixedPayout");
     const targetField = document.querySelector(".target-retained-field");
-    const disabled = policy !== "fixed";
+    const disabled = !includeDividend || policy !== "fixed";
     if(fixedInput) fixedInput.disabled = disabled;
+    document.querySelectorAll(".dividend-option-field").forEach((el) => {
+      el.hidden = !includeDividend;
+    });
     if(targetField) targetField.hidden = objective !== "retainedTarget";
     updateRoleModeControls();
   }
@@ -1677,15 +1702,15 @@
     const p = readParams(document);
     const rows = calculator.runSearch(p.divPolicy, p);
     const noRows = calculator.runSearch("none", p);
-    const allRows = calculator.runSearch("all", p);
+    const allRows = p.includeDividend ? calculator.runSearch("all", p) : [];
     const current = bestCurrentScenario(calculator, p);
     const best = rows[0] || null;
 
     latestState = {rows, best, current, params:p};
     renderResult(best, current, noRows[0] || null, allRows[0] || null, p);
-    renderBalance(best, current);
+    renderBalance(best, current, p);
     renderDelta(best, current);
-    renderTable(rows);
+    renderTable(rows, p);
     drawChart(rows, current, p);
   }
 
@@ -1711,6 +1736,10 @@
       if(["roleMode","coupleTotalMonthly","couplePrimaryMonthly","coupleSpouseMonthly","couplePrimaryMaxMonthly","coupleSpouseMaxMonthly"].includes(id)){
         el.addEventListener("input", updateRoleModeControls);
         el.addEventListener("change", updateRoleModeControls);
+      }
+      if(id === "includeDividend"){
+        el.addEventListener("input", updateDependentControls);
+        el.addEventListener("change", updateDependentControls);
       }
       if(moneyIds.has(id) || percentIds.has(id)){
         el.addEventListener("input", () => {
