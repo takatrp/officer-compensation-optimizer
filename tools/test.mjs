@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const app = require("../app.js");
 
-assert.equal(app.VERSION, "1.16");
+assert.equal(app.VERSION, "1.17");
 assert.equal(app.parseNumber("20,000,000"), 20000000);
 assert.equal(app.formatMoneyText("3000000"), "3,000,000");
 assert.equal(app.formatMoneyText("3,000,000"), "3,000,000");
@@ -67,6 +67,16 @@ const retainedTargetRows = calculator.runSearch("optimize", retainedTargetParams
 assert.ok(retainedTargetRows.length > 100);
 assert.ok(retainedTargetRows[0].retainedGap <= retainedTargetRows[1].retainedGap + 1);
 assert.ok(Math.abs(retainedTargetRows[0].retained - retainedTargetParams.targetRetained) <= retainedTargetRows[0].retainedGap + 1);
+
+const targetVisual = app.targetVisualData(5000000, 4846000, 1650000);
+assert.equal(targetVisual.difference, -154000);
+assert.equal(targetVisual.gap, 154000);
+assert.ok(Math.abs(targetVisual.targetRatio - 0.9692) < 0.00001);
+assert.ok(targetVisual.bestGapWidth < targetVisual.currentGapWidth);
+assert.equal(targetVisual.improvement, 1496000);
+const negativeTargetVisual = app.targetVisualData(5000000, -1000000, 2000000);
+assert.equal(negativeTargetVisual.difference, -6000000);
+assert.equal(negativeTargetVisual.actualWidth, 0);
 
 const coupleParams = {
   ...params,

@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.16";
+  const VERSION = "1.17";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -229,6 +229,15 @@
     retained:"#2458d3",
     personalLoad:"#b45309",
     companyLoad:"#6d4aff"
+  };
+
+  const reasonColors = {
+    salary:"#2f7f8f",
+    retained:"#2458d3",
+    takeHome:"#047857",
+    tax:"#6d4aff",
+    social:"#b45309",
+    dividend:"#b42318"
   };
 
   let latestRows = [];
@@ -1013,6 +1022,99 @@
     return `${n >= 0 ? "+" : ""}${man(n)}`;
   }
 
+  function targetVisualData(target, actual, currentGap){
+    const safeTarget = Math.max(0, Number(target) || 0);
+    const actualValue = Number(actual) || 0;
+    const chartActual = Math.max(0, actualValue);
+    const difference = actualValue - safeTarget;
+    const gap = Math.abs(difference);
+    const safeCurrentGap = Number.isFinite(currentGap) ? Math.max(0, currentGap) : null;
+    const amountScale = Math.max(safeTarget, chartActual, 1) * 1.08;
+    const gapScale = Math.max(gap, safeCurrentGap || 0, 1);
+    return {
+      difference,
+      gap,
+      targetRatio:safeTarget > 0 ? actualValue / safeTarget : null,
+      targetPosition:clamp(safeTarget / amountScale * 100, 0, 100),
+      actualWidth:clamp(chartActual / amountScale * 100, 0, 100),
+      currentGap:safeCurrentGap,
+      currentGapWidth:safeCurrentGap === null ? null : clamp(safeCurrentGap / gapScale * 100, 0, 100),
+      bestGapWidth:clamp(gap / gapScale * 100, 0, 100),
+      improvement:safeCurrentGap === null ? null : safeCurrentGap - gap
+    };
+  }
+
+  function renderReasonBreakdownChart(title, totalLabel, parts){
+    const normalized = parts.map((part) => {
+      const value = Number(part.value) || 0;
+      return {...part, value, chartValue:Math.max(0, value)};
+    });
+    const total = normalized.reduce((sum, part) => sum + part.chartValue, 0) || 1;
+    const ariaText = normalized.map((part) => `${part.label} ${man(part.value)}`).join("、");
+    const segments = normalized.map((part) => {
+      const width = part.chartValue / total * 100;
+      return `<span class="reason-breakdown-segment" aria-hidden="true" style="width:${width}%;background:${part.color}"></span>`;
+    }).join("");
+    const legend = normalized.map((part) => `
+      <div class="reason-breakdown-item${part.value < 0 ? " negative" : ""}">
+        <span><i style="background:${part.color}" aria-hidden="true"></i>${part.label}</span>
+        <strong>${man(part.value)}</strong>
+      </div>
+    `).join("");
+
+    return `
+      <section class="reason-visual-section">
+        <div class="reason-visual-head"><span>${title}</span><strong>${totalLabel}</strong></div>
+        <div class="reason-breakdown-track" role="img" aria-label="${title}。${ariaText}">${segments}</div>
+        <div class="reason-breakdown-legend">${legend}</div>
+      </section>
+    `;
+  }
+
+  function renderTargetReasonVisual(best, current, p){
+    const visual = targetVisualData(p.targetRetained, best.retained, current?.retainedGap);
+    const differenceLabel = visual.difference < 0
+      ? `不足 ${man(visual.gap)}`
+      : visual.difference > 0
+        ? `超過 ${man(visual.gap)}`
+        : "目標と一致";
+    const ratioLabel = visual.targetRatio === null
+      ? "目標比 -"
+      : `目標比 ${(visual.targetRatio * 100).toLocaleString("ja-JP", {maximumFractionDigits:2})}%`;
+    const gapComparison = visual.currentGap === null ? "" : `
+      <div class="reason-gap-chart" aria-label="比較月額の目標差額 ${man(visual.currentGap)}、おすすめの目標差額 ${man(visual.gap)}">
+        <p class="reason-chart-caption">比較月額からどれだけ目標へ近づいたか</p>
+        <div class="reason-gap-row">
+          <span>比較月額</span>
+          <i><b class="current" style="width:${visual.currentGapWidth}%"></b></i>
+          <strong>${man(visual.currentGap)}</strong>
+        </div>
+        <div class="reason-gap-row">
+          <span>おすすめ</span>
+          <i><b class="best" style="width:${visual.bestGapWidth}%"></b></i>
+          <strong>${man(visual.gap)}</strong>
+        </div>
+        <p class="reason-gap-result">目標差額を ${man(Math.max(0, visual.improvement))} 縮小</p>
+      </div>
+    `;
+
+    return `
+      <section class="reason-visual-section reason-target-section">
+        <div class="reason-visual-head"><span>目標との距離</span><strong>${differenceLabel}</strong></div>
+        <div class="reason-target-values">
+          <span>おすすめ <strong>${man(best.retained)}</strong></span>
+          <span>目標 <strong>${man(p.targetRetained)}</strong></span>
+        </div>
+        <div class="reason-target-track" role="img" aria-label="目標法人留保 ${man(p.targetRetained)} に対し、おすすめ法人留保 ${man(best.retained)}、${differenceLabel}">
+          <span class="reason-target-fill" style="width:${visual.actualWidth}%"></span>
+          <i class="reason-target-marker" style="left:${visual.targetPosition}%"><span>目標</span></i>
+        </div>
+        <div class="reason-target-summary"><strong>${differenceLabel}</strong><span>${ratioLabel}</span></div>
+        ${gapComparison}
+      </section>
+    `;
+  }
+
   function renderRecommendationReason(best, current, p){
     const personalName = personalLabel(best);
     const retainedName = isCoupleRow(best) ? "夫婦持分相当の法人留保" : "持分相当の法人留保";
@@ -1030,30 +1132,59 @@
     const personalDetail = isCoupleRow(best)
       ? best.people.map((person) => `${person.label}: 給与 ${man(person.annualSalary)} ＋ 配当 ${man(person.ownerDividend)} − 個人税 ${man(person.personalTax)} − 本人社保 ${man(person.employeeSI)} ＝ ${man(person.personalTakeHome)}`).join("<br>")
       : `給与 ${man(best.annualSalary)} ＋ 本人配当 ${man(best.ownerDividend)} − 個人税 ${man(best.personalTax)} − 本人社保 ${man(best.employeeSI)} ＝ ${man(best.personalTakeHome)}`;
+    const objectiveVisual = retainedTargetMode
+      ? renderTargetReasonVisual(best, current, p)
+      : p.objective === "ownerTotal"
+        ? renderReasonBreakdownChart("評価指標の内訳", `合計 ${man(best.metric)}`, [
+            {label:personalName, value:best.personalTakeHome, color:reasonColors.takeHome},
+            {label:retainedName, value:best.ownerRetainedValue, color:reasonColors.retained}
+          ])
+        : "";
+    const companyVisual = renderReasonBreakdownChart("会社利益の行き先", `前利益 ${man(p.preProfit)}`, [
+      {label:"役員報酬", value:best.annualSalary, color:reasonColors.salary},
+      {label:"会社社保", value:best.employerSI, color:reasonColors.social},
+      {label:"法人税等", value:best.corpTax, color:reasonColors.tax},
+      {label:"配当", value:best.totalDividend, color:reasonColors.dividend},
+      {label:"法人留保", value:best.retained, color:reasonColors.retained}
+    ]);
+    const personalInflow = best.annualSalary + best.ownerDividend;
+    const personalVisual = renderReasonBreakdownChart(`${personalName}の行き先`, `給与・配当 ${man(personalInflow)}`, [
+      {label:personalName, value:best.personalTakeHome, color:reasonColors.takeHome},
+      {label:"個人税", value:best.personalTax, color:reasonColors.tax},
+      {label:"本人社保", value:best.employeeSI, color:reasonColors.social}
+    ]);
 
     return `
       <div class="recommendation-reason">
         <p class="reason-title">なぜこの金額か</p>
         <p class="reason-lead">${retainedTargetMode ? "法人に残したい目標留保に最も近く、同程度なら手取りが大きい候補です。" : "探索条件を満たす候補のうち、評価指標が最も高い月額です。"}</p>
-        <dl class="reason-list">
-          <div>
-            <dt>${retainedTargetMode ? "目標法人留保" : "評価指標"}</dt>
-            <dd>${metricLine}</dd>
-          </div>
-          <div>
-            <dt>${personalName}</dt>
-            <dd>${personalDetail}</dd>
-          </div>
-          <div>
-            <dt>法人側</dt>
-            <dd>前利益 ${man(p.preProfit)} − 年間役員報酬 ${man(best.annualSalary)} − 会社社保 ${man(best.employerSI)} − 法人税等 ${man(best.corpTax)} ＝ 税引後利益 ${man(best.companyAfterTax)}<br>
-            税引後利益 ${man(best.companyAfterTax)} − 配当総額 ${man(best.totalDividend)} ＝ 法人留保 ${man(best.retained)}</dd>
-          </div>
-          <div>
-            <dt>比較</dt>
-            <dd>${comparisonLine}</dd>
-          </div>
-        </dl>
+        <div class="reason-visuals">
+          ${objectiveVisual}
+          ${companyVisual}
+          ${personalVisual}
+        </div>
+        <details class="reason-formulas">
+          <summary>計算式の詳細</summary>
+          <dl class="reason-list">
+            <div>
+              <dt>${retainedTargetMode ? "目標法人留保" : "評価指標"}</dt>
+              <dd>${metricLine}</dd>
+            </div>
+            <div>
+              <dt>${personalName}</dt>
+              <dd>${personalDetail}</dd>
+            </div>
+            <div>
+              <dt>法人側</dt>
+              <dd>前利益 ${man(p.preProfit)} − 年間役員報酬 ${man(best.annualSalary)} − 会社社保 ${man(best.employerSI)} − 法人税等 ${man(best.corpTax)} ＝ 税引後利益 ${man(best.companyAfterTax)}<br>
+              税引後利益 ${man(best.companyAfterTax)} − 配当総額 ${man(best.totalDividend)} ＝ 法人留保 ${man(best.retained)}</dd>
+            </div>
+            <div>
+              <dt>比較</dt>
+              <dd>${comparisonLine}</dd>
+            </div>
+          </dl>
+        </details>
       </div>
     `;
   }
@@ -1698,6 +1829,7 @@
     yen,
     man,
     rateLabel,
-    buildCsv
+    buildCsv,
+    targetVisualData
   };
 });
