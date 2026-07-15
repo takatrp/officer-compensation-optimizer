@@ -255,6 +255,10 @@ h3{
   gap:12px;
 }
 
+.dividend-share-grid{
+  margin-top:10px;
+}
+
 .field{
   display:grid;
   gap:6px;

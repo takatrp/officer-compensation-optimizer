@@ -7,8 +7,8 @@
     <link rel="icon" type="image/png" href="forstaff.png">
     <link rel="shortcut icon" type="image/png" href="forstaff.png">
     <link rel="apple-touch-icon" href="forstaff.png">
-    <link rel="stylesheet" href="styles.css?v=1.18">
-    <script src="app.js?v=1.18" defer></script>
+    <link rel="stylesheet" href="styles.css?v=1.19">
+    <script src="app.js?v=1.19" defer></script>
   </head>
   <body>
     <main class="page-shell">
@@ -25,7 +25,7 @@
         <div class="header-actions no-print">
           <button class="ghost-button manual-trigger" type="button" id="openManual">使い方</button>
           <button type="button" id="printPage">印刷</button>
-          <p class="revision">v1.18</p>
+          <p class="revision">v1.19</p>
         </div>
       </header>
 
@@ -52,9 +52,9 @@
               <label class="field field-full" for="strategyPreset">
                 <span class="field-label">試算方針</span>
                 <select id="strategyPreset">
-                  <option value="balanced">バランス型：役員報酬を中心に手取りと留保を見る</option>
                   <option value="retainedTarget">内部留保から逆算：法人に残したい額を先に決める</option>
-                  <option value="ownerTotal">総手残り最大：個人手取り＋持分相当の法人留保</option>
+                  <option value="balanced">バランス型：役員報酬を中心に手取りと留保を見る</option>
+                  <option value="ownerTotal">総手残り最大：個人手取り＋法人留保</option>
                   <option value="personalCash">個人キャッシュ最大：給与・配当で個人資金を厚くする</option>
                   <option value="companyReserve">法人資金温存：配当なしで会社に資金を残す</option>
                   <option value="dividendUse">配当活用（オプション）：役員報酬と配当を組み合わせる</option>
@@ -62,7 +62,7 @@
                 </select>
               </label>
 
-              <label class="field field-full target-retained-field" for="targetRetained" hidden>
+              <label class="field field-full target-retained-field" for="targetRetained">
                 <span class="field-label">最初に決める目標法人留保</span>
                 <input id="targetRetained" type="text" inputmode="numeric" value="5,000,000">
                 <p class="field-note">この金額を先に入力し、目標に最も近い役員報酬・配当の組み合わせを探索します。</p>
@@ -149,20 +149,10 @@
                 <p class="field-note" id="stepNote" hidden></p>
               </label>
 
-              <div class="field-subhead field-full">持株・その他所得</div>
-              <label class="field" for="shareRate">
-                <span class="field-label">本人/役員Aの持株割合</span>
-                <input id="shareRate" type="text" inputmode="decimal" value="100">
-              </label>
-
+              <div class="field-subhead field-full">その他所得</div>
               <label class="field" for="otherIncome">
                 <span class="field-label">本人/役員Aの他の所得金額</span>
                 <input id="otherIncome" type="text" inputmode="numeric" value="0">
-              </label>
-
-              <label class="field couple-only" for="spouseShareRate" hidden>
-                <span class="field-label">役員Bの持株割合</span>
-                <input id="spouseShareRate" type="text" inputmode="decimal" value="0">
               </label>
 
               <label class="field couple-only" for="spouseOtherIncome" hidden>
@@ -184,9 +174,9 @@
               <label class="field" for="objective">
                 <span class="field-label">評価基準</span>
                 <select id="objective">
+                  <option value="retainedTarget">法人留保目標に近い案</option>
                   <option value="ownerTotal">オーナー総手残り最大</option>
                   <option value="personalCash">個人キャッシュ最大</option>
-                  <option value="retainedTarget">法人留保目標に近い案</option>
                 </select>
               </label>
 
@@ -199,6 +189,22 @@
                 <input type="checkbox" id="includeDividend">
                 <span>配当を考慮する（オプション）</span>
               </label>
+
+              <div class="dividend-option-field field-full" hidden>
+                <div class="field-subhead">配当の持分</div>
+                <div class="field-grid dividend-share-grid">
+                  <label class="field" for="shareRate">
+                    <span class="field-label">本人/役員Aの持株割合</span>
+                    <input id="shareRate" type="text" inputmode="decimal" value="100">
+                    <p class="field-note">配当総額から本人が受け取る金額の按分に使用します。</p>
+                  </label>
+
+                  <label class="field couple-only" for="spouseShareRate" hidden>
+                    <span class="field-label">役員Bの持株割合</span>
+                    <input id="spouseShareRate" type="text" inputmode="decimal" value="0">
+                  </label>
+                </div>
+              </div>
 
               <label class="field dividend-option-field" for="divPolicy" hidden>
                 <span class="field-label">配当方針</span>
@@ -519,15 +525,15 @@
             <ol class="manual-steps">
               <li>
                 <strong>試算方針と所得税の年分を選びます。</strong>
-                <span>内部留保から逆算する場合は、方針の直下に表示される目標法人留保を最初に入力します。通常は役員報酬のみで計算します。</span>
+                <span>初期設定は「内部留保から逆算」です。方針の直下にある目標法人留保を最初に入力し、通常は役員報酬のみで計算します。</span>
               </li>
               <li>
-                <strong>利益額、現在報酬、探索上限、持株割合を入力します。</strong>
+                <strong>利益額、現在報酬、探索上限を入力します。</strong>
                 <span>夫婦役員モードでは、合計月額を固定してA/B配分を比較する方法と、A/Bそれぞれの上限内で組み合わせを探索する方法を選べます。</span>
               </li>
               <li>
                 <strong>必要な場合だけ配当を考慮します。</strong>
-                <span>「配当を考慮する」を選ぶと、配当方針と配当控除の設定が表示されます。税率・社会保険料率は詳細設定から調整できます。</span>
+                <span>「配当を考慮する」を選ぶと、持株割合、配当方針、配当控除の設定が表示されます。持株割合は配当受取額の按分にだけ使用します。</span>
               </li>
               <li>
                 <strong>おすすめ案と理由を確認します。</strong>
@@ -554,7 +560,7 @@
         <a href="https://www.matsumoto-kaikei.or.jp/" target="_blank" rel="noopener license">税理士法人松本会計事務所</a> ｜
         <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="license noopener">CC BY-NC-SA 4.0</a> ｜
         <a href="/tool-portal/terms.html" target="_blank" rel="noopener">利用条件</a> ｜
-        <span>v1.18</span>
+        <span>v1.19</span>
       </footer>
     </main>
   </body>

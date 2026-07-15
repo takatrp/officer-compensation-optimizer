@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const app = require("../app.js");
 
-assert.equal(app.VERSION, "1.18");
+assert.equal(app.VERSION, "1.19");
 assert.equal(app.parseNumber("20,000,000"), 20000000);
 assert.equal(app.formatMoneyText("3000000"), "3,000,000");
 assert.equal(app.formatMoneyText("3,000,000"), "3,000,000");
@@ -43,6 +43,9 @@ const calculator = app.createCalculator();
 const params = app.defaultParams();
 assert.equal(params.roleMode, "single");
 assert.equal(params.step, 50000);
+assert.equal(params.objective, "retainedTarget");
+assert.equal(params.targetRetained, 5000000);
+assert.equal(params.minRetained, 0);
 assert.equal(params.includeDividend, false);
 assert.equal(params.divPolicy, "none");
 const sample = calculator.simulate(800000, 0, params);
@@ -56,14 +59,21 @@ assert.ok(sample.personalTakeHome > 0);
 const rows = calculator.runSearch("optimize", params);
 assert.ok(rows.length > 10);
 assert.ok(rows[0].feasible);
-assert.ok(rows[0].metric >= rows[1].metric);
+assert.ok(rows[0].retainedGap <= rows[1].retainedGap + 1);
 assert.equal(rows[0].monthly % params.step, 0);
 assert.ok(rows.every((row) => row.payoutRate === 0));
+
+const minorityNoDividend = calculator.simulate(800000, 0, {...params, share:0.25, objective:"ownerTotal"});
+assert.equal(minorityNoDividend.ownerRetainedValue, minorityNoDividend.retained);
+assert.equal(minorityNoDividend.ownerTotal, minorityNoDividend.personalTakeHome + minorityNoDividend.retained);
 
 const dividendParams = {...params, includeDividend:true, divPolicy:"optimize"};
 const dividendRows = calculator.runSearch("optimize", dividendParams);
 assert.ok(dividendRows.length > rows.length);
 assert.ok(dividendRows.some((row) => row.payoutRate > 0));
+const minorityDividend = calculator.simulate(800000, 0.5, {...dividendParams, share:0.25});
+assert.ok(Math.abs(minorityDividend.ownerDividend - minorityDividend.totalDividend * 0.25) < 1);
+assert.equal(minorityDividend.ownerRetainedValue, minorityDividend.retained);
 
 const retainedTargetParams = {
   ...params,

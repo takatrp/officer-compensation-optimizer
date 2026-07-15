@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.18";
+  const VERSION = "1.19";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -194,13 +194,13 @@
     coupleSpouseMaxMonthly:"1,200,000",
     spouseShareRate:"0",
     spouseOtherIncome:"0",
-    strategyPreset:"balanced",
-    objective:"ownerTotal",
+    strategyPreset:"retainedTarget",
+    objective:"retainedTarget",
     includeDividend:false,
     divPolicy:"optimize",
     fixedPayout:"0",
     targetRetained:"5,000,000",
-    minRetained:"3,000,000",
+    minRetained:"0",
     noLoss:true,
     applyDividendCredit:true,
     taxYear:"r8r9",
@@ -695,7 +695,7 @@
 
     function simulatePeople(peopleInput, payoutRate, rawParams, meta){
       const p = normalizeParams(rawParams);
-      const people = peopleInput.filter((person) => person.monthly > 0 || person.share > 0 || person.otherIncome > 0);
+      const people = peopleInput.filter((person) => person.monthly > 0 || (p.includeDividend && person.share > 0) || person.otherIncome > 0);
       const totalAnnualSalary = people.reduce((sum, person) => sum + person.annualSalary, 0);
       const socialRows = people.map((person) => ({person, si:personSocialInsurance(person, p)}));
       const employerSI = socialRows.reduce((sum, item) => sum + item.si.employer, 0);
@@ -717,7 +717,7 @@
       const personalTax = sum("personalTax");
       const personalTakeHome = sum("personalTakeHome");
       const householdShare = Math.min(1, people.reduce((total, person) => total + person.share, 0));
-      const ownerRetainedValue = retained * householdShare;
+      const ownerRetainedValue = retained;
       const ownerTotal = personalTakeHome + ownerRetainedValue;
       const metric = p.objective === "personalCash" ? personalTakeHome : ownerTotal;
       const retainedGap = Math.abs(retained - p.targetRetained);
@@ -726,7 +726,9 @@
         (!p.noLoss || companyAfterTax >= -1) &&
         retained >= p.minRetained - 1;
 
-      const primary = calculatedPeople.find((person) => person.key === "primary") || calculatedPeople[0] || null;
+      const primary = calculatedPeople.find((person) => person.key === "primary")
+        || (p.roleMode === "single" ? calculatedPeople[0] : null)
+        || null;
       const spouse = calculatedPeople.find((person) => person.key === "spouse") || null;
 
       return {
@@ -1131,7 +1133,7 @@
 
   function renderRecommendationReason(best, current, p){
     const personalName = personalLabel(best);
-    const retainedName = isCoupleRow(best) ? "夫婦持分相当の法人留保" : "持分相当の法人留保";
+    const retainedName = "法人留保";
     const retainedTargetMode = p.objective === "retainedTarget";
     const metricLine = retainedTargetMode
       ? `目標 ${man(p.targetRetained)} に対して法人留保 ${man(best.retained)}（差額 ${signedMan(best.retained - p.targetRetained)}）`
@@ -1234,7 +1236,7 @@
     const objectiveText = retainedTargetMode
       ? `法人留保 ${man(p.targetRetained)} から逆算`
       : p.objective === "ownerTotal"
-      ? `${personalName}＋${coupleMode ? "夫婦" : ""}持分相当の法人留保`
+      ? `${personalName}＋法人留保`
       : (coupleMode ? "世帯キャッシュ" : "個人キャッシュ");
     let messageClass = "";
     let message = "税・社会保険の概算だけで見ると、この条件では上記の月額が最も有利です。";
@@ -1253,7 +1255,7 @@
     const shareNote = p.includeDividend && best.totalDividend > 0 && best.householdShare < 0.999
       ? `<div class="message">${coupleMode ? "夫婦持分" : "持株割合"} ${(best.householdShare * 100).toLocaleString("ja-JP", {maximumFractionDigits:1})}% のため、配当総額 ${man(best.totalDividend)} のうち${ownerDividendLabel(best)}は ${man(best.ownerDividend)} です。残りは他の株主に配当されます。</div>`
       : "";
-    const shareOverNote = coupleMode && p.share + p.spouseShare > 1.000001
+    const shareOverNote = p.includeDividend && coupleMode && p.share + p.spouseShare > 1.000001
       ? '<div class="message warn">役員A/Bの持株割合合計が100%を超えています。計算上は世帯持分100%を上限に補正しています。入力値をご確認ください。</div>'
       : "";
     const resultLabel = coupleMode ? "おすすめ月額配分" : "おすすめ月額役員報酬";
