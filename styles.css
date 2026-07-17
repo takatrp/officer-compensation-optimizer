@@ -537,62 +537,76 @@ select{
   color:var(--muted);
 }
 
-.reason-gap-chart{
+.reason-current-comparison{
   display:grid;
-  gap:6px;
+  gap:8px;
   margin-top:4px;
   padding-top:9px;
   border-top:1px dashed #d8dee8;
 }
 
-.reason-chart-caption,
-.reason-gap-result{
+.reason-comparison-caption,
+.reason-comparison-result{
   margin:0;
   color:var(--muted);
   font-size:11px;
   font-weight:800;
 }
 
-.reason-gap-row{
+.reason-comparison-flow{
   display:grid;
-  grid-template-columns:64px minmax(70px,1fr) auto;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
   align-items:center;
-  gap:7px;
-  color:#475467;
-  font-size:11px;
+  gap:10px;
 }
 
-.reason-gap-row>i{
-  display:block;
-  height:8px;
-  overflow:hidden;
-  border-radius:3px;
-  background:#eef2f6;
+.reason-comparison-point{
+  display:grid;
+  gap:2px;
+  min-width:0;
+  padding:3px 0;
 }
 
-.reason-gap-row b{
-  display:block;
-  min-width:2px;
-  height:100%;
-}
-
-.reason-gap-row .current{
-  background:#98a2b3;
-}
-
-.reason-gap-row .best{
-  background:var(--blue);
-}
-
-.reason-gap-row>strong{
-  color:var(--ink);
-  font-size:11px;
+.reason-comparison-point>span{
+  color:var(--muted);
+  font-size:10px;
   font-weight:900;
 }
 
-.reason-gap-result{
+.reason-comparison-point>strong{
+  color:var(--ink);
+  font-size:13px;
+  font-weight:950;
+  overflow-wrap:anywhere;
+}
+
+.reason-comparison-point>small{
+  color:#344054;
+  font-size:11px;
+  font-weight:800;
+}
+
+.reason-comparison-point>em{
+  color:var(--muted);
+  font-size:11px;
+  font-style:normal;
+}
+
+.reason-comparison-point.recommended>span,
+.reason-comparison-point.recommended>strong{
+  color:var(--blue);
+}
+
+.reason-comparison-arrow{
+  color:var(--brand);
+  font-size:20px;
+  font-weight:950;
+}
+
+.reason-comparison-result{
   color:var(--brand-dark);
-  text-align:right;
+  font-size:12px;
+  text-align:center;
 }
 
 .reason-breakdown-track{
@@ -1127,6 +1141,16 @@ tr:last-child td{
 
   .reason-breakdown-legend{
     grid-template-columns:1fr;
+  }
+
+  .reason-comparison-flow{
+    grid-template-columns:1fr;
+    gap:4px;
+  }
+
+  .reason-comparison-arrow{
+    justify-self:center;
+    transform:rotate(90deg);
   }
 
   .score-card{

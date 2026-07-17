@@ -7,8 +7,8 @@
     <link rel="icon" type="image/png" href="forstaff.png">
     <link rel="shortcut icon" type="image/png" href="forstaff.png">
     <link rel="apple-touch-icon" href="forstaff.png">
-    <link rel="stylesheet" href="styles.css?v=1.19">
-    <script src="app.js?v=1.19" defer></script>
+    <link rel="stylesheet" href="styles.css?v=1.20">
+    <script src="app.js?v=1.20" defer></script>
   </head>
   <body>
     <main class="page-shell">
@@ -25,7 +25,7 @@
         <div class="header-actions no-print">
           <button class="ghost-button manual-trigger" type="button" id="openManual">使い方</button>
           <button type="button" id="printPage">印刷</button>
-          <p class="revision">v1.19</p>
+          <p class="revision">v1.20</p>
         </div>
       </header>
 
@@ -105,7 +105,7 @@
 
               <div class="field-subhead field-full single-only">単独役員の報酬</div>
               <label class="field single-only" for="currentMonthly">
-                <span class="field-label">比較する月額役員報酬</span>
+                <span class="field-label">現在の役員報酬月額</span>
                 <input id="currentMonthly" type="text" inputmode="numeric" value="800,000">
               </label>
 
@@ -121,13 +121,13 @@
               </label>
 
               <label class="field couple-only" for="couplePrimaryMonthly" hidden>
-                <span class="field-label">比較する役員A月額</span>
+                <span class="field-label">現在の役員A月額</span>
                 <input id="couplePrimaryMonthly" type="text" inputmode="numeric" value="800,000">
                 <p class="field-note couple-split-only">役員Bは、夫婦合計月額報酬との差額として計算します。</p>
               </label>
 
               <label class="field couple-only couple-grid-only" for="coupleSpouseMonthly" hidden>
-                <span class="field-label">比較する役員B月額</span>
+                <span class="field-label">現在の役員B月額</span>
                 <input id="coupleSpouseMonthly" type="text" inputmode="numeric" value="400,000">
               </label>
 
@@ -528,7 +528,7 @@
                 <span>初期設定は「内部留保から逆算」です。方針の直下にある目標法人留保を最初に入力し、通常は役員報酬のみで計算します。</span>
               </li>
               <li>
-                <strong>利益額、現在報酬、探索上限を入力します。</strong>
+                <strong>利益額、現在の役員報酬月額、探索上限を入力します。</strong>
                 <span>夫婦役員モードでは、合計月額を固定してA/B配分を比較する方法と、A/Bそれぞれの上限内で組み合わせを探索する方法を選べます。</span>
               </li>
               <li>
@@ -537,7 +537,7 @@
               </li>
               <li>
                 <strong>おすすめ案と理由を確認します。</strong>
-                <span>目標留保との差、比較月額からの改善、会社利益と個人収入の行き先をグラフで確認できます。数式は「計算式の詳細」から開けます。</span>
+                <span>現在の役員報酬月額とおすすめ案の月額・法人留保を並べて確認できます。会社利益と個人収入の行き先はグラフで確認し、数式は「計算式の詳細」から開けます。</span>
               </li>
               <li>
                 <strong>グラフと上位候補でバランスを見ます。</strong>
@@ -560,7 +560,7 @@
         <a href="https://www.matsumoto-kaikei.or.jp/" target="_blank" rel="noopener license">税理士法人松本会計事務所</a> ｜
         <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="license noopener">CC BY-NC-SA 4.0</a> ｜
         <a href="/tool-portal/terms.html" target="_blank" rel="noopener">利用条件</a> ｜
-        <span>v1.19</span>
+        <span>v1.20</span>
       </footer>
     </main>
   </body>

@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.19";
+  const VERSION = "1.20";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -1046,7 +1046,6 @@
     const gap = Math.abs(difference);
     const safeCurrentGap = Number.isFinite(currentGap) ? Math.max(0, currentGap) : null;
     const amountScale = Math.max(safeTarget, chartActual, 1) * 1.08;
-    const gapScale = Math.max(gap, safeCurrentGap || 0, 1);
     return {
       difference,
       gap,
@@ -1054,10 +1053,16 @@
       targetPosition:clamp(safeTarget / amountScale * 100, 0, 100),
       actualWidth:clamp(chartActual / amountScale * 100, 0, 100),
       currentGap:safeCurrentGap,
-      currentGapWidth:safeCurrentGap === null ? null : clamp(safeCurrentGap / gapScale * 100, 0, 100),
-      bestGapWidth:clamp(gap / gapScale * 100, 0, 100),
       improvement:safeCurrentGap === null ? null : safeCurrentGap - gap
     };
+  }
+
+  function targetPositionText(actual, target){
+    const difference = (Number(actual) || 0) - (Number(target) || 0);
+    if(Math.abs(difference) < 1) return "目標と一致";
+    return difference > 0
+      ? `目標より ${man(Math.abs(difference))} 多い`
+      : `目標より ${man(Math.abs(difference))} 少ない`;
   }
 
   function renderReasonBreakdownChart(title, totalLabel, parts){
@@ -1097,20 +1102,30 @@
     const ratioLabel = visual.targetRatio === null
       ? "目標比 -"
       : `目標比 ${(visual.targetRatio * 100).toLocaleString("ja-JP", {maximumFractionDigits:2})}%`;
-    const gapComparison = visual.currentGap === null ? "" : `
-      <div class="reason-gap-chart" aria-label="比較月額の目標差額 ${man(visual.currentGap)}、おすすめの目標差額 ${man(visual.gap)}">
-        <p class="reason-chart-caption">比較月額からどれだけ目標へ近づいたか</p>
-        <div class="reason-gap-row">
-          <span>比較月額</span>
-          <i><b class="current" style="width:${visual.currentGapWidth}%"></b></i>
-          <strong>${man(visual.currentGap)}</strong>
+    const improvementText = visual.improvement > 1
+      ? `目標との差が ${man(visual.improvement)} 小さくなります`
+      : visual.improvement < -1
+        ? `目標との差が ${man(Math.abs(visual.improvement))} 大きくなります`
+        : "目標との差は変わりません";
+    const currentComparison = !current || visual.currentGap === null ? "" : `
+      <div class="reason-current-comparison" role="group" aria-label="現在の役員報酬月額 ${monthlyLabel(current)} では法人留保 ${man(current.retained)}。おすすめ ${monthlyLabel(best)} では法人留保 ${man(best.retained)}。${improvementText}">
+        <p class="reason-comparison-caption">現在の役員報酬月額との比較</p>
+        <div class="reason-comparison-flow">
+          <div class="reason-comparison-point">
+            <span>現在</span>
+            <strong>${monthlyLabel(current)}</strong>
+            <small>法人留保 ${man(current.retained)}</small>
+            <em>${targetPositionText(current.retained, p.targetRetained)}</em>
+          </div>
+          <span class="reason-comparison-arrow" aria-hidden="true">→</span>
+          <div class="reason-comparison-point recommended">
+            <span>おすすめ</span>
+            <strong>${monthlyLabel(best)}</strong>
+            <small>法人留保 ${man(best.retained)}</small>
+            <em>${targetPositionText(best.retained, p.targetRetained)}</em>
+          </div>
         </div>
-        <div class="reason-gap-row">
-          <span>おすすめ</span>
-          <i><b class="best" style="width:${visual.bestGapWidth}%"></b></i>
-          <strong>${man(visual.gap)}</strong>
-        </div>
-        <p class="reason-gap-result">目標差額を ${man(Math.max(0, visual.improvement))} 縮小</p>
+        <p class="reason-comparison-result">${improvementText}</p>
       </div>
     `;
 
@@ -1126,7 +1141,7 @@
           <i class="reason-target-marker" style="left:${visual.targetPosition}%"><span>目標</span></i>
         </div>
         <div class="reason-target-summary"><strong>${differenceLabel}</strong><span>${ratioLabel}</span></div>
-        ${gapComparison}
+        ${currentComparison}
       </section>
     `;
   }
@@ -1142,9 +1157,9 @@
         : `${personalName} ${man(best.personalTakeHome)} ＝ ${man(best.metric)}`;
     const comparisonLine = current
       ? retainedTargetMode
-        ? `比較案比：目標差額 ${man(current.retainedGap)} → ${man(best.retainedGap)}（改善 ${signedMan(current.retainedGap - best.retainedGap)}）、${personalName} ${signedMan(best.personalTakeHome - current.personalTakeHome)}`
-        : `比較案比：評価指標 ${signedMan(best.metric - current.metric)}、${personalName} ${signedMan(best.personalTakeHome - current.personalTakeHome)}、法人留保 ${signedMan(best.retained - current.retained)}`
-      : "比較月額は現在の条件では候補外です。";
+        ? `現在の役員報酬月額との比較：目標差額 ${man(current.retainedGap)} → ${man(best.retainedGap)}（改善 ${signedMan(current.retainedGap - best.retainedGap)}）、${personalName} ${signedMan(best.personalTakeHome - current.personalTakeHome)}`
+        : `現在の役員報酬月額との比較：評価指標 ${signedMan(best.metric - current.metric)}、${personalName} ${signedMan(best.personalTakeHome - current.personalTakeHome)}、法人留保 ${signedMan(best.retained - current.retained)}`
+      : "現在の役員報酬月額は現在の条件では候補外です。";
     const personalEquation = (person) => `給与 ${man(person.annualSalary)}${p.includeDividend ? ` ＋ 配当 ${man(person.ownerDividend)}` : ""} − 個人税 ${man(person.personalTax)} − 本人社保 ${man(person.employeeSI)} ＝ ${man(person.personalTakeHome)}`;
     const personalDetail = isCoupleRow(best)
       ? best.people.map((person) => `${person.label}: ${personalEquation(person)}`).join("<br>")
@@ -1345,7 +1360,7 @@
         </div>
       </div>
       ${renderBalanceRow("おすすめ案", best, p)}
-      ${renderBalanceRow("比較月額", current, p)}
+      ${renderBalanceRow("現在の役員報酬月額", current, p)}
     `;
   }
 
@@ -1526,7 +1541,10 @@
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = "#b45309";
-      ctx.fillText("比較月額", x + 8, pad.t + 16);
+      const currentLabel = "現在の役員報酬月額";
+      const currentLabelWidth = ctx.measureText(currentLabel).width;
+      const currentLabelX = Math.min(x + 8, pad.l + w - currentLabelWidth);
+      ctx.fillText(currentLabel, Math.max(pad.l + 4, currentLabelX), pad.t + 16);
     }
 
     ctx.fillStyle = "#667085";
