@@ -7,8 +7,8 @@
     <link rel="icon" type="image/png" href="forstaff.png">
     <link rel="shortcut icon" type="image/png" href="forstaff.png">
     <link rel="apple-touch-icon" href="forstaff.png">
-    <link rel="stylesheet" href="styles.css?v=1.20">
-    <script src="app.js?v=1.20" defer></script>
+    <link rel="stylesheet" href="styles.css?v=1.21">
+    <script src="app.js?v=1.21" defer></script>
   </head>
   <body>
     <main class="page-shell">
@@ -24,8 +24,8 @@
         </div>
         <div class="header-actions no-print">
           <button class="ghost-button manual-trigger" type="button" id="openManual">使い方</button>
-          <button type="button" id="printPage">印刷</button>
-          <p class="revision">v1.20</p>
+          <button type="button" id="printPage">印刷/PDF</button>
+          <p class="revision">v1.21</p>
         </div>
       </header>
 
@@ -512,6 +512,8 @@
         </ul>
       </section>
 
+      <section class="print-summary" id="printSummary" aria-label="印刷用試算サマリー"></section>
+
       <dialog class="manual-dialog" id="manualDialog" aria-labelledby="manualTitle">
         <div class="manual-card">
           <div class="manual-head">
@@ -543,6 +545,10 @@
                 <strong>グラフと上位候補でバランスを見ます。</strong>
                 <span>個人手取り、法人留保、評価指標の推移を同じグラフで確認し、候補表はコピーやCSVダウンロードに使えます。</span>
               </li>
+              <li>
+                <strong>「印刷/PDF」で面談資料を保存します。</strong>
+                <span>主要条件、おすすめ案、現在の役員報酬月額との比較、計算要約だけをA4縦1枚にまとめて印刷します。</span>
+              </li>
             </ol>
             <div class="manual-note">
               <h3>確認事項</h3>
@@ -560,7 +566,7 @@
         <a href="https://www.matsumoto-kaikei.or.jp/" target="_blank" rel="noopener license">税理士法人松本会計事務所</a> ｜
         <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="license noopener">CC BY-NC-SA 4.0</a> ｜
         <a href="/tool-portal/terms.html" target="_blank" rel="noopener">利用条件</a> ｜
-        <span>v1.20</span>
+        <span>v1.21</span>
       </footer>
     </main>
   </body>

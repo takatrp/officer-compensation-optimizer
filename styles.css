@@ -991,6 +991,10 @@ tr:last-child td{
   text-decoration:underline;
 }
 
+.print-summary{
+  display:none;
+}
+
 .manual-dialog{
   width:min(760px, calc(100% - 32px));
   max-height:min(86vh, 760px);
@@ -1162,10 +1166,19 @@ tr:last-child td{
   }
 }
 
+@page{
+  size:A4 portrait;
+  margin:9mm;
+}
+
 @media print{
   html,
   body{
     background:#fff;
+    color:#172033;
+    font-size:9pt;
+    print-color-adjust:exact;
+    -webkit-print-color-adjust:exact;
   }
 
   .page-shell{
@@ -1174,30 +1187,239 @@ tr:last-child td{
     padding:0;
   }
 
-  .no-print,
-  .manual-dialog{
+  .app-header,
+  .work-grid,
+  .visual-grid,
+  .note-panel,
+  .manual-dialog,
+  .app-footer,
+  .no-print{
     display:none!important;
   }
 
-  .app-header{
-    padding:0 0 10px;
+  .print-summary{
+    display:block!important;
   }
 
-  .panel{
-    box-shadow:none;
+  .print-sheet{
+    display:grid;
+    gap:4.5mm;
+    width:100%;
+    min-height:276mm;
+    color:#172033;
+  }
+
+  .print-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8mm;
+    padding-bottom:3mm;
+    border-bottom:1.5px solid #217d85;
+  }
+
+  .print-brand{
+    display:flex;
+    align-items:center;
+    gap:3mm;
+  }
+
+  .print-brand img{
+    width:12mm;
+    height:12mm;
+    object-fit:contain;
+  }
+
+  .print-brand p,
+  .print-brand h1,
+  .print-meta,
+  .print-section h2,
+  .print-recommendation p,
+  .print-equations p,
+  .print-notes h2,
+  .print-notes ul{
+    margin:0;
+  }
+
+  .print-brand p{
+    color:#217d85;
+    font-size:8pt;
+    font-weight:800;
+  }
+
+  .print-brand h1{
+    font-size:17pt;
+    line-height:1.15;
+  }
+
+  .print-meta{
+    display:grid;
+    gap:1mm;
+    color:#667085;
+    font-size:7.5pt;
+    text-align:right;
+  }
+
+  .print-section{
+    display:grid;
+    gap:2mm;
     break-inside:avoid;
   }
 
-  .work-grid,
-  .visual-grid{
-    grid-template-columns:1fr;
+  .print-section h2,
+  .print-notes h2{
+    padding-bottom:1mm;
+    border-bottom:1px solid #cfd8e3;
+    color:#245d63;
+    font-size:10pt;
   }
 
-  .result-panel{
-    break-before:auto;
+  .print-condition-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:2mm 4mm;
   }
 
-  .reason-formulas:not([open])>*{
-    display:block;
+  .print-condition-grid>div{
+    display:grid;
+    gap:.5mm;
+    min-width:0;
+  }
+
+  .print-condition-grid span,
+  .print-kpi-grid span,
+  .print-recommendation span,
+  .print-equations span{
+    color:#667085;
+    font-size:7.5pt;
+    font-weight:800;
+  }
+
+  .print-condition-grid strong{
+    font-size:8.5pt;
+    line-height:1.25;
+    overflow-wrap:anywhere;
+  }
+
+  .print-recommendation{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);
+    align-items:center;
+    gap:7mm;
+    padding:3mm 4mm;
+    border-left:2.5mm solid #217d85;
+    background:#f1f9fa;
+    break-inside:avoid;
+  }
+
+  .print-recommendation>div{
+    display:grid;
+    gap:.7mm;
+  }
+
+  .print-recommendation strong{
+    font-size:18pt;
+    line-height:1.1;
+  }
+
+  .print-recommendation small{
+    color:#475467;
+    font-size:8pt;
+    font-weight:700;
+  }
+
+  .print-recommendation p{
+    font-size:8.5pt;
+    font-weight:700;
+    line-height:1.5;
+  }
+
+  .print-kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    border-top:1px solid #cfd8e3;
+    border-bottom:1px solid #cfd8e3;
+    break-inside:avoid;
+  }
+
+  .print-kpi-grid>div{
+    display:grid;
+    gap:1mm;
+    padding:2.5mm 3mm;
+    border-left:1px solid #cfd8e3;
+  }
+
+  .print-kpi-grid>div:first-child{
+    border-left:0;
+  }
+
+  .print-kpi-grid strong{
+    font-size:12pt;
+  }
+
+  .print-comparison-table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+    font-size:8pt;
+  }
+
+  .print-comparison-table th,
+  .print-comparison-table td{
+    padding:1.7mm 2mm;
+    border:1px solid #d8dee8;
+    text-align:right;
+    vertical-align:middle;
+    overflow-wrap:anywhere;
+  }
+
+  .print-comparison-table thead th{
+    background:#eef5f6;
+    color:#245d63;
+  }
+
+  .print-comparison-table th:first-child,
+  .print-comparison-table td:first-child{
+    width:21%;
+    text-align:left;
+  }
+
+  .print-equations{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:5mm;
+  }
+
+  .print-equations>div{
+    display:grid;
+    gap:1mm;
+    min-width:0;
+  }
+
+  .print-equations p{
+    font-size:8pt;
+    line-height:1.5;
+  }
+
+  .print-notes{
+    display:grid;
+    gap:1.5mm;
+    break-inside:avoid;
+  }
+
+  .print-notes ul{
+    padding-left:4.5mm;
+    color:#475467;
+    font-size:7pt;
+    line-height:1.45;
+  }
+
+  .print-footer{
+    align-self:end;
+    padding-top:2mm;
+    border-top:1px solid #cfd8e3;
+    color:#667085;
+    font-size:7pt;
+    text-align:right;
   }
 }

@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const app = require("../app.js");
 
-assert.equal(app.VERSION, "1.20");
+assert.equal(app.VERSION, "1.21");
 assert.equal(app.parseNumber("20,000,000"), 20000000);
 assert.equal(app.formatMoneyText("3000000"), "3,000,000");
 assert.equal(app.formatMoneyText("3,000,000"), "3,000,000");

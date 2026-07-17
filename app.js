@@ -10,7 +10,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : window, function(){
   "use strict";
 
-  const VERSION = "1.20";
+  const VERSION = "1.21";
 
   const healthBands = [
     [0,63000,58000],[63000,73000,68000],[73000,83000,78000],[83000,93000,88000],[93000,101000,98000],
@@ -1388,6 +1388,125 @@
     `).join("");
   }
 
+  function selectedOptionText(id){
+    const select = document.getElementById(id);
+    return select?.selectedOptions?.[0]?.textContent?.trim() || "-";
+  }
+
+  function printMonthlyLabel(row){
+    if(!row) return "-";
+    return isCoupleRow(row)
+      ? `${monthlyLabel(row)}（合計 ${yen(row.totalMonthly)}）`
+      : monthlyLabel(row);
+  }
+
+  function signedYen(n){
+    if(!Number.isFinite(n)) return "-";
+    return `${n >= 0 ? "+" : ""}${yen(n)}`;
+  }
+
+  function renderPrintSummary(best, current, p){
+    const box = document.getElementById("printSummary");
+    if(!box) return;
+    const generatedDate = new Date().toLocaleDateString("ja-JP");
+    if(!best){
+      box.innerHTML = `<article class="print-sheet"><h1>役員報酬検討結果</h1><p>現在の条件では候補がありません。</p></article>`;
+      return;
+    }
+
+    const coupleMode = isCoupleRow(best);
+    const personalName = personalLabel(best);
+    const currentMonthlyValue = current ? (isCoupleRow(current) ? current.totalMonthly : current.monthly) : NaN;
+    const bestMonthlyValue = coupleMode ? best.totalMonthly : best.monthly;
+    const taxAndSocial = best.corpTax + best.personalTax + best.employeeSI + best.employerSI;
+    const targetCondition = p.objective === "retainedTarget"
+      ? `<div><span>目標法人留保</span><strong>${man(p.targetRetained)}</strong></div>`
+      : `<div><span>法人留保下限</span><strong>${man(p.minRetained)}</strong></div>`;
+    const dividendCondition = p.includeDividend
+      ? `考慮する（配当率 ${pct(best.payoutRate)}）`
+      : "考慮しない（役員報酬のみ）";
+    const recommendationReason = p.objective === "retainedTarget"
+      ? `目標法人留保 ${man(p.targetRetained)} に対し、法人留保 ${man(best.retained)}、差額 ${man(best.retainedGap)} の候補です。`
+      : "設定した評価基準の候補のうち、評価額が最も高い案です。";
+    const currentRows = current ? `
+      <tr><th>月額役員報酬</th><td>${printMonthlyLabel(current)}</td><td>${printMonthlyLabel(best)}</td><td>${signedYen(bestMonthlyValue - currentMonthlyValue)}</td></tr>
+      <tr><th>年間役員報酬</th><td>${man(current.annualSalary)}</td><td>${man(best.annualSalary)}</td><td>${signedMan(best.annualSalary - current.annualSalary)}</td></tr>
+      <tr><th>${personalName}</th><td>${man(current.personalTakeHome)}</td><td>${man(best.personalTakeHome)}</td><td>${signedMan(best.personalTakeHome - current.personalTakeHome)}</td></tr>
+      <tr><th>法人留保</th><td>${man(current.retained)}</td><td>${man(best.retained)}</td><td>${signedMan(best.retained - current.retained)}</td></tr>
+      ${p.objective === "retainedTarget" ? `<tr><th>目標留保との差</th><td>${man(current.retainedGap)}</td><td>${man(best.retainedGap)}</td><td>${signedMan(best.retainedGap - current.retainedGap)}</td></tr>` : ""}
+    ` : `<tr><td colspan="4">現在の役員報酬月額は、現在の制約条件では候補外です。</td></tr>`;
+    const dividendEquation = p.includeDividend ? ` − 配当総額 ${man(best.totalDividend)}` : "";
+    const personalDividend = p.includeDividend ? ` ＋ 配当受取 ${man(best.ownerDividend)}` : "";
+
+    box.innerHTML = `
+      <article class="print-sheet">
+        <header class="print-header">
+          <div class="print-brand">
+            <img src="forstaff.png" alt="">
+            <div><p>役員報酬検討ツール</p><h1>役員報酬検討結果</h1></div>
+          </div>
+          <div class="print-meta"><span>作成日 ${generatedDate}</span><span>v${VERSION}</span></div>
+        </header>
+
+        <section class="print-section">
+          <h2>試算条件</h2>
+          <div class="print-condition-grid">
+            <div><span>試算方針</span><strong>${selectedOptionText("strategyPreset")}</strong></div>
+            <div><span>所得税の年分</span><strong>${selectedOptionText("taxYear")}</strong></div>
+            <div><span>役員構成</span><strong>${selectedOptionText("roleMode")}</strong></div>
+            <div><span>協会けんぽ支部</span><strong>${selectedOptionText("prefecture")}</strong></div>
+            <div><span>控除前利益</span><strong>${man(p.preProfit)}</strong></div>
+            ${targetCondition}
+            <div><span>現在の役員報酬月額</span><strong>${printMonthlyLabel(current)}</strong></div>
+            <div><span>配当</span><strong>${dividendCondition}</strong></div>
+          </div>
+        </section>
+
+        <section class="print-recommendation">
+          <div>
+            <span>${coupleMode ? "おすすめ月額配分" : "おすすめ月額役員報酬"}</span>
+            <strong>${printMonthlyLabel(best)}</strong>
+            <small>年間合計 ${man(best.annualSalary)}</small>
+          </div>
+          <p>${recommendationReason}</p>
+        </section>
+
+        <section class="print-kpi-grid" aria-label="おすすめ案の主要金額">
+          <div><span>${personalName}</span><strong>${man(best.personalTakeHome)}</strong></div>
+          <div><span>法人留保</span><strong>${man(best.retained)}</strong></div>
+          <div><span>税・社保合計</span><strong>${man(taxAndSocial)}</strong></div>
+          <div><span>法人税等</span><strong>${man(best.corpTax)}</strong></div>
+        </section>
+
+        <section class="print-section">
+          <h2>現在の役員報酬月額との比較</h2>
+          <table class="print-comparison-table">
+            <thead><tr><th>項目</th><th>現在</th><th>おすすめ</th><th>増減</th></tr></thead>
+            <tbody>${currentRows}</tbody>
+          </table>
+        </section>
+
+        <section class="print-section">
+          <h2>計算要約</h2>
+          <div class="print-equations">
+            <div><span>法人側</span><p>控除前利益 ${man(p.preProfit)} − 年間役員報酬 ${man(best.annualSalary)} − 会社社保 ${man(best.employerSI)} − 法人税等 ${man(best.corpTax)}${dividendEquation} ＝ 法人留保 ${man(best.retained)}</p></div>
+            <div><span>個人・世帯側</span><p>年間給与 ${man(best.annualSalary)}${personalDividend} − 個人税 ${man(best.personalTax)} − 本人社保 ${man(best.employeeSI)} ＝ ${personalName} ${man(best.personalTakeHome)}</p></div>
+          </div>
+        </section>
+
+        <section class="print-notes">
+          <h2>確認事項</h2>
+          <ul>
+            <li>本資料は税・社会保険の概算比較です。役員報酬は職務内容との整合性、定期同額給与、資金繰り、金融機関評価を別途ご確認ください。</li>
+            <li>住民税の調整控除、均等割の非課税限度額、防衛特別法人税、社会保険未加入時の国民健康保険料・国民年金保険料などは簡略化または未反映です。</li>
+          </ul>
+        </section>
+
+        <footer class="print-footer">税理士法人松本会計事務所 ｜ 役員報酬検討ツール v${VERSION}</footer>
+      </article>
+    `;
+  }
+
   function renderTable(rows, p){
     latestRows = rows;
     const box = document.getElementById("tableBox");
@@ -1730,6 +1849,7 @@
     renderResult(best, current, noRows[0] || null, allRows[0] || null, p);
     renderBalance(best, current, p);
     renderDelta(best, current);
+    renderPrintSummary(best, current, p);
     renderTable(rows, p);
     drawChart(rows, current, p);
   }
@@ -1818,7 +1938,12 @@
     });
 
     document.getElementById("printPage").addEventListener("click", () => {
+      if(latestState.best) renderPrintSummary(latestState.best, latestState.current, latestState.params);
       window.print();
+    });
+
+    window.addEventListener("beforeprint", () => {
+      if(latestState.best) renderPrintSummary(latestState.best, latestState.current, latestState.params);
     });
   }
 
